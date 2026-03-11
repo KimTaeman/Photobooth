@@ -5,171 +5,477 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Festival Photobooth 2026</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f8fafc; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
-        
-        /* Lock Screen */
-        #lock-screen { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .lock-card { background: var(--panel); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; width: 220px; background: #0f172a; color: white; }
-        .admin-btn { background: var(--accent); color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+        :root {
+            --bg: #0a0a0f;
+            --panel: #16161d;
+            --card: #1e1e28;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --text: #f0f0f5;
+            --muted: #6b7280;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
 
-        /* Main Grid Layout */
-        .app-grid { display: grid; grid-template-columns: 220px 1fr 280px; grid-template-rows: 70px 1fr 200px; height: 100vh; }
-        header { grid-column: span 3; background: var(--panel); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid #334155; }
-        
-        /* Sidebar: Frames */
-        .frames-sidebar { border-right: 1px solid #334155; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: rgba(30, 41, 59, 0.5); }
-        .frame-item { width: 100%; border: 3px solid transparent; cursor: pointer; border-radius: 12px; transition: 0.3s; background: #000; aspect-ratio: 3/2; object-fit: cover;}
-        .frame-item.active { border-color: var(--accent); transform: scale(0.96); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        /* Center: Camera */
-        .camera-container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; padding: 20px; }
-        #video-wrapper { position: relative; width: 100%; max-width: 800px; aspect-ratio: 3/2; border: 6px solid var(--panel); border-radius: 20px; overflow: hidden; background: #111; }
+        /* ---- Shared Screen Base ---- */
+        .screen {
+            position: fixed; inset: 0; z-index: 10;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--bg);
+            transition: opacity 0.4s ease;
+        }
+        .screen.active { display: flex; }
+
+        /* ---- Lock Screen ---- */
+        #screen-lock { z-index: 50; background: linear-gradient(135deg, #0a0a1a 0%, #1a1028 100%); }
+        .lock-icon { font-size: 64px; margin-bottom: 20px; }
+        .lock-card {
+            background: var(--card); padding: 48px 40px; border-radius: 24px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+            min-width: 360px;
+        }
+        .lock-card h1 { font-size: 1.5rem; margin-bottom: 8px; font-weight: 700; }
+        .lock-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+        .lock-input {
+            width: 100%; padding: 14px 18px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1); background: var(--bg);
+            color: var(--text); font-size: 1rem; outline: none;
+            transition: border-color 0.2s;
+        }
+        .lock-input:focus { border-color: var(--accent); }
+        .lock-input.shake {
+            animation: shake 0.4s ease;
+            border-color: var(--danger);
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .lock-error { color: var(--danger); font-size: 0.8rem; margin-top: 10px; min-height: 20px; }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 32px; border-radius: 14px; border: none;
+            font-weight: 700; font-size: 1rem; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: var(--accent); color: white;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 30px var(--accent-glow); }
+        .btn-outline {
+            background: transparent; color: var(--text);
+            border: 2px solid rgba(255,255,255,0.15);
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-lg { padding: 18px 48px; font-size: 1.2rem; border-radius: 16px; }
+        .btn-block { width: 100%; margin-top: 18px; }
+
+        /* ---- Frame Selection Screen ---- */
+        #screen-frames { background: var(--bg); }
+        .frames-header { margin-bottom: 40px; text-align: center; }
+        .frames-header h1 { font-size: 2rem; font-weight: 800; }
+        .frames-header p { color: var(--muted); margin-top: 8px; }
+        .frames-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px; max-width: 700px; width: 90%; padding: 0 20px;
+        }
+        .frame-card {
+            position: relative; background: var(--card); border-radius: 20px;
+            overflow: hidden; cursor: pointer; border: 3px solid transparent;
+            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+        }
+        .frame-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.1); }
+        .frame-card.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+        .frame-card img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; }
+        .frame-card .check {
+            position: absolute; top: 12px; right: 12px;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--accent); display: none;
+            align-items: center; justify-content: center;
+            font-size: 16px; font-weight: bold;
+        }
+        .frame-card.selected .check { display: flex; }
+        .frame-card .frame-label {
+            padding: 12px 16px; font-weight: 600; font-size: 0.9rem;
+        }
+        #btn-start-session {
+            margin-top: 36px; opacity: 0.4; pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        #btn-start-session.ready { opacity: 1; pointer-events: auto; }
+
+        /* ---- Camera Screen ---- */
+        #screen-camera {
+            background: #000;
+            justify-content: flex-start;
+            padding: 0;
+        }
+        .camera-topbar {
+            width: 100%; padding: 16px 30px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0,0,0,0.6); z-index: 5;
+        }
+        .shot-indicators {
+            display: flex; gap: 10px;
+        }
+        .shot-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .shot-dot.done { background: var(--success); border-color: var(--success); }
+        .shot-dot.current { background: var(--accent); border-color: var(--accent); animation: pulse-dot 1s infinite; }
+        @keyframes pulse-dot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        .shot-label { font-weight: 700; font-size: 0.95rem; }
+
+        .camera-viewport {
+            flex: 1; width: 100%;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        #video-wrapper {
+            position: relative; width: 90%; max-width: 900px;
+            aspect-ratio: 3/2; border-radius: 20px; overflow: hidden;
+            border: 4px solid rgba(255,255,255,0.08);
+        }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        #frame-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        
-        #countdown-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 180px; font-weight: 900; z-index: 20; background: rgba(0,0,0,0.3); color: white; }
-        #flash-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 30; opacity: 0; background: white; }
-        #status-msg { margin-top: 15px; color: #94a3b8; font-weight: 500; }
+        #frame-overlay {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10; display: none;
+        }
+        #countdown-overlay {
+            position: absolute; inset: 0; display: none;
+            align-items: center; justify-content: center;
+            font-size: 200px; font-weight: 900; z-index: 20;
+            background: rgba(0,0,0,0.4); color: white;
+            text-shadow: 0 0 60px rgba(255,255,255,0.3);
+        }
+        #flash-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            z-index: 30; opacity: 0; background: white;
+            transition: opacity 0.08s;
+        }
 
-        .capture-btn { margin-top: 25px; background: white; color: black; border: none; padding: 18px 50px; border-radius: 50px; font-weight: 900; font-size: 1.4rem; cursor: pointer; transition: 0.2s; }
-        .capture-btn:disabled { background: #475569; cursor: not-allowed; }
+        .camera-bottom {
+            width: 100%; padding: 24px;
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(0,0,0,0.6);
+        }
+        #camera-status { color: var(--muted); font-weight: 500; margin-bottom: 16px; font-size: 1.1rem; }
+        .shutter-btn {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: white; border: 5px solid rgba(255,255,255,0.3);
+            cursor: pointer; transition: transform 0.15s;
+            position: relative;
+        }
+        .shutter-btn::after {
+            content: ''; position: absolute; inset: 6px;
+            border-radius: 50%; border: 3px solid rgba(0,0,0,0.15);
+        }
+        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-btn:disabled { background: #475569; cursor: not-allowed; border-color: #334155; }
 
-        /* Right: Sidebar */
-        .qr-sidebar { border-left: 1px solid #334155; padding: 30px; display: flex; flex-direction: column; align-items: center; background: rgba(30, 41, 59, 0.5); }
-        .qr-container { background: white; padding: 10px; border-radius: 10px; margin: 20px 0; }
-        
-        /* Bottom: Gallery */
-        footer { grid-column: span 3; border-top: 1px solid #334155; padding: 20px; display: flex; gap: 20px; overflow-x: auto; background: var(--panel); }
-        .gallery-item { position: relative; height: 100%; aspect-ratio: 3/2; flex-shrink: 0; border-radius: 12px; overflow: hidden; border: 2px solid #334155; }
-        .gallery-item img { height: 100%; width: 100%; object-fit: cover; }
-        .del-btn { position: absolute; top: 5px; right: 5px; background: #ef4444; border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
+        /* ---- Result Screen ---- */
+        #screen-result {
+            background: linear-gradient(180deg, #0a0a1a 0%, #12121f 100%);
+            padding: 40px 20px; overflow-y: auto;
+        }
+        .result-content {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 30px; max-width: 800px; width: 100%;
+        }
+        .result-header { text-align: center; }
+        .result-header h1 { font-size: 2rem; font-weight: 800; }
+        .result-header p { color: var(--muted); margin-top: 6px; }
+        .result-photo {
+            width: 100%; max-width: 640px; border-radius: 16px;
+            overflow: hidden; border: 3px solid rgba(255,255,255,0.08);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .result-photo img { width: 100%; display: block; }
+        .result-actions {
+            display: flex; gap: 16px; flex-wrap: wrap;
+            justify-content: center;
+        }
+        .qr-section {
+            background: var(--card); border-radius: 20px;
+            padding: 24px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .qr-section p { color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+        .qr-box {
+            background: white; padding: 12px; border-radius: 12px;
+            display: inline-block; margin-top: 12px;
+        }
+
+        /* ---- Upload Spinner ---- */
+        .upload-overlay {
+            position: fixed; inset: 0; z-index: 60;
+            display: none; align-items: center; justify-content: center;
+            background: rgba(10, 10, 15, 0.92);
+            flex-direction: column; gap: 20px;
+        }
+        .upload-overlay.active { display: flex; }
+        .spinner {
+            width: 56px; height: 56px; border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .upload-overlay p { color: var(--muted); font-weight: 600; font-size: 1.1rem; }
+        .upload-error { color: var(--danger); font-size: 0.85rem; margin-top: 8px; }
+        .expiry-note { color: var(--muted); font-size: 0.75rem; margin-top: 6px; opacity: 0.8; }
     </style>
 </head>
 <body>
 
-    <div id="lock-screen">
+    <!-- SCREEN 1: Lock -->
+    <div id="screen-lock" class="screen active">
         <div class="lock-card">
-            <h1>Booth Admin</h1>
-            <input type="password" id="pass-input" placeholder="Password (school2026)">
-            <button class="admin-btn" onclick="checkPass()">Unlock Booth</button>
+            <div class="lock-icon">&#128274;</div>
+            <h1>Photobooth</h1>
+            <p>Enter password to unlock the booth</p>
+            <input type="password" id="pass-input" class="lock-input" placeholder="Password" autocomplete="off">
+            <div id="lock-error" class="lock-error"></div>
+            <button class="btn btn-primary btn-block" id="btn-unlock">Unlock</button>
         </div>
     </div>
 
-    <div class="app-grid">
-        <header>
-            <h2 style="margin:0;">SCHOOL FEST '26</h2>
-            <div style="font-weight: bold; color: var(--accent);">OFFLINE MODE</div>
-        </header>
+    <!-- SCREEN 2: Frame Selection -->
+    <div id="screen-frames" class="screen">
+        <div class="frames-header">
+            <h1>Choose Your Frame</h1>
+            <p>Select a frame for your photo strip</p>
+        </div>
+        <div class="frames-grid" id="frames-grid">
+            <div class="frame-card" data-frame="frame1.png">
+                <img src="frame1.png" alt="Frame 1">
+                <div class="check">&#10003;</div>
+                <div class="frame-label">Frame 1</div>
+            </div>
+            <div class="frame-card" data-frame="frame2.png">
+                <img src="frame2.png" alt="Frame 2">
+                <div class="check">&#10003;</div>
+                <div class="frame-label">Frame 2</div>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="btn-start-session">Start Photo Session</button>
+    </div>
 
-        <aside class="frames-sidebar">
-            <p style="font-size: 11px; font-weight: 800; color: #64748b; margin:0">1. SELECT FRAME</p>
-            <img src="frame1.png" alt="Frame 1" class="frame-item" onclick="setFrame(this)">
-            <img src="frame2.png" alt="Frame 2" class="frame-item" onclick="setFrame(this)">
-        </aside>
-
-        <main class="camera-container">
+    <!-- SCREEN 3: Camera -->
+    <div id="screen-camera" class="screen">
+        <div class="camera-topbar">
+            <div class="shot-indicators" id="shot-indicators">
+                <div class="shot-dot" data-shot="1"></div>
+                <div class="shot-dot" data-shot="2"></div>
+                <div class="shot-dot" data-shot="3"></div>
+                <div class="shot-dot" data-shot="4"></div>
+            </div>
+            <div class="shot-label" id="shot-label">Shot 1 / 4</div>
+        </div>
+        <div class="camera-viewport">
             <div id="video-wrapper">
                 <div id="countdown-overlay">3</div>
                 <div id="flash-overlay"></div>
                 <video id="webcam" autoplay playsinline></video>
-                <img id="frame-overlay" style="display:none;">
+                <img id="frame-overlay">
             </div>
-            <div id="status-msg">Pick a frame to start</div>
-            <button class="capture-btn" id="main-action-btn" onclick="startPhotoSession()">START SESSION</button>
-        </main>
+        </div>
+        <div class="camera-bottom">
+            <div id="camera-status">Get ready and press the button!</div>
+            <button class="shutter-btn" id="shutter-btn"></button>
+        </div>
+    </div>
 
-        <aside class="qr-sidebar">
-            <p style="font-weight: bold; margin:0">2. LOCAL PREVIEW</p>
-            <div class="qr-container">
-                <canvas id="canvas-qr" width="150" height="150"></canvas>
+    <!-- SCREEN 4: Result -->
+    <div id="screen-result" class="screen">
+        <div class="result-content">
+            <div class="result-header">
+                <h1>Your Photo!</h1>
+                <p>Scan the QR code or tap download</p>
             </div>
-            <p style="font-size: 11px; color: #94a3b8; text-align: center;">Photo will download automatically once finished.</p>
-        </aside>
+            <div class="result-photo">
+                <img id="result-img" src="" alt="Your photo">
+            </div>
+            <div class="qr-section">
+                <div class="qr-box">
+                    <canvas id="canvas-qr"></canvas>
+                </div>
+                <p>Scan to download your photo</p>
+                <p class="expiry-note">&#9200; Link expires in 24 hours</p>
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-primary btn-lg" id="btn-download">&#11015; Download</button>
+                <button class="btn btn-outline btn-lg" id="btn-new-session">New Session</button>
+            </div>
+        </div>
+    </div>
 
-        <footer id="photo-gallery"></footer>
+    <!-- Upload Spinner Overlay -->
+    <div class="upload-overlay" id="upload-overlay">
+        <div class="spinner"></div>
+        <p id="upload-status">Uploading photo...</p>
     </div>
 
     <canvas id="hidden-canvas" style="display:none;"></canvas>
 
 <script>
+    // ---- Supabase Config ----
+    const SUPABASE_URL = 'https://yzeorfygmubgyukeypsx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6ZW9yZnlnbXViZ3l1a2V5cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMDk0MTUsImV4cCI6MjA4ODc4NTQxNX0.KS6cbc3-U0MI-V3A-8saYQFTNEa5gBnGEGmPqGsJVnw';
+    const STORAGE_BUCKET = 'photos';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const PASSWORD = "school2026";
+    let selectedFrame = null;
     let sessionPhotos = [];
     let isProcessing = false;
+    let cameraStream = null;
 
-    // --- 1. ADMIN LOCK ---
-    window.checkPass = function() {
-        const passInput = document.getElementById('pass-input');
-        if (passInput.value === "school2026") {
-            document.getElementById('lock-screen').style.display = 'none';
-            startCamera();
+    // ---- Screen Navigation ----
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // ---- 1. Lock Screen ----
+    const passInput = document.getElementById('pass-input');
+    const lockError = document.getElementById('lock-error');
+
+    document.getElementById('btn-unlock').addEventListener('click', handleUnlock);
+    passInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleUnlock(); });
+
+    function handleUnlock() {
+        if (passInput.value === PASSWORD) {
+            showScreen('screen-frames');
         } else {
-            alert("Incorrect password.");
+            lockError.textContent = 'Incorrect password';
+            passInput.classList.add('shake');
+            passInput.value = '';
+            passInput.focus();
+            setTimeout(() => passInput.classList.remove('shake'), 400);
         }
-    };
+    }
 
-    // --- 2. CAMERA SETUP ---
-    window.startCamera = function() {
-        const video = document.getElementById('webcam');
-        navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => alert("Camera error: " + err.message));
-    };
+    // ---- 2. Frame Selection ----
+    document.querySelectorAll('.frame-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.frame-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedFrame = card.dataset.frame;
+            document.getElementById('btn-start-session').classList.add('ready');
+        });
+    });
 
-    // --- 3. UI LOGIC ---
-    window.setFrame = function(el) {
+    document.getElementById('btn-start-session').addEventListener('click', async () => {
+        if (!selectedFrame) return;
+        await startCamera();
         const overlay = document.getElementById('frame-overlay');
-        document.querySelectorAll('.frame-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        overlay.src = el.src;
+        overlay.src = selectedFrame;
         overlay.style.display = 'block';
-        document.getElementById('status-msg').innerText = "Ready! Click START.";
-    };
+        resetShotIndicators();
+        showScreen('screen-camera');
+    });
 
-    // --- 4. PHOTO SESSION ---
-    window.startPhotoSession = async function() {
-        const overlay = document.getElementById('frame-overlay');
-        const actionBtn = document.getElementById('main-action-btn');
-        const statusMsg = document.getElementById('status-msg');
+    // ---- 3. Camera ----
+    async function startCamera() {
+        const video = document.getElementById('webcam');
+        if (cameraStream) return;
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+            });
+            video.srcObject = cameraStream;
+        } catch (err) {
+            alert("Camera error: " + err.message);
+        }
+    }
 
-        if (!overlay.src || overlay.style.display === 'none') return alert("Pick a frame first!");
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+            document.getElementById('webcam').srcObject = null;
+        }
+    }
+
+    function resetShotIndicators() {
+        document.querySelectorAll('.shot-dot').forEach(d => {
+            d.classList.remove('done', 'current');
+        });
+        document.querySelector('.shot-dot[data-shot="1"]').classList.add('current');
+        document.getElementById('shot-label').textContent = 'Shot 1 / 4';
+        document.getElementById('camera-status').textContent = 'Get ready and press the button!';
+    }
+
+    function updateShotUI(shotNum) {
+        document.querySelectorAll('.shot-dot').forEach(d => {
+            const n = parseInt(d.dataset.shot);
+            d.classList.remove('done', 'current');
+            if (n < shotNum) d.classList.add('done');
+            else if (n === shotNum) d.classList.add('current');
+        });
+        document.getElementById('shot-label').textContent = `Shot ${shotNum} / 4`;
+    }
+
+    document.getElementById('shutter-btn').addEventListener('click', startPhotoSession);
+
+    async function startPhotoSession() {
         if (isProcessing) return;
-
         isProcessing = true;
-        actionBtn.disabled = true;
+        const btn = document.getElementById('shutter-btn');
+        const status = document.getElementById('camera-status');
+        btn.disabled = true;
         sessionPhotos = [];
 
         for (let i = 1; i <= 4; i++) {
-            statusMsg.innerText = `Pose! Shot ${i} of 4`;
+            updateShotUI(i);
+            status.textContent = `Pose! Shot ${i} of 4`;
             await runCountdown();
             captureCurrentFrame();
             triggerFlash();
-            await new Promise(r => setTimeout(r, 1000));
+            // Mark as done
+            document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.remove('current');
+            document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.add('done');
+            if (i < 4) await new Promise(r => setTimeout(r, 1200));
         }
 
-        statusMsg.innerText = "Generating your photo...";
-        await processAndSave();
-        
+        status.textContent = 'Processing...';
+        await processAndShow();
+        stopCamera();
         isProcessing = false;
-        actionBtn.disabled = false;
-        statusMsg.innerText = "Done! Photo downloaded.";
-    };
+        btn.disabled = false;
+    }
 
     function runCountdown() {
         return new Promise(resolve => {
-            const countdownEl = document.getElementById('countdown-overlay');
+            const el = document.getElementById('countdown-overlay');
             let count = 3;
-            countdownEl.style.display = 'flex';
-            countdownEl.innerText = count;
+            el.style.display = 'flex';
+            el.textContent = count;
             const timer = setInterval(() => {
                 count--;
                 if (count <= 0) {
                     clearInterval(timer);
-                    countdownEl.style.display = 'none';
+                    el.style.display = 'none';
                     resolve();
-                } else { countdownEl.innerText = count; }
+                } else {
+                    el.textContent = count;
+                }
             }, 800);
         });
     }
@@ -177,66 +483,165 @@
     function triggerFlash() {
         const flash = document.getElementById('flash-overlay');
         flash.style.opacity = '1';
-        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+        setTimeout(() => { flash.style.opacity = '0'; }, 120);
     }
 
     function captureCurrentFrame() {
         const video = document.getElementById('webcam');
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
-        const tCtx = tempCanvas.getContext('2d');
-        // Mirror the image to match video preview
-        tCtx.translate(tempCanvas.width, 0);
-        tCtx.scale(-1, 1);
-        tCtx.drawImage(video, 0, 0);
-        sessionPhotos.push(tempCanvas.toDataURL('image/jpeg', 0.9));
+        const c = document.createElement('canvas');
+        c.width = video.videoWidth;
+        c.height = video.videoHeight;
+        const ctx = c.getContext('2d');
+        ctx.translate(c.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0);
+        sessionPhotos.push(c.toDataURL('image/jpeg', 0.92));
     }
 
-    async function processAndSave() {
+    // ---- 4. Process & Result ----
+    async function processAndShow() {
         const canvas = document.getElementById('hidden-canvas');
         const ctx = canvas.getContext('2d');
-        const overlay = document.getElementById('frame-overlay');
-        
-        // High-res output
+
         canvas.width = 1800;
         canvas.height = 1200;
-        ctx.fillStyle = "white";
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, 1800, 1200);
 
-        // Draw the 4 photos in a grid
-        const coords = [{x: 40, y: 40}, {x: 920, y: 40}, {x: 40, y: 620}, {x: 920, y: 620}];
+        const coords = [
+            { x: 40, y: 40 }, { x: 920, y: 40 },
+            { x: 40, y: 620 }, { x: 920, y: 620 }
+        ];
+
         for (let i = 0; i < 4; i++) {
-            const img = await new Promise(r => { 
-                const im = new Image(); im.src = sessionPhotos[i]; im.onload = () => r(im); 
-            });
+            const img = await loadImage(sessionPhotos[i]);
             ctx.drawImage(img, coords[i].x, coords[i].y, 840, 540);
         }
 
-        // Layer the frame on top
-        const frameImg = await new Promise(r => {
-            const im = new Image(); im.src = overlay.src; im.onload = () => r(im);
-        });
+        const frameImg = await loadImage(selectedFrame);
         ctx.drawImage(frameImg, 0, 0, 1800, 1200);
 
-        const finalData = canvas.toDataURL('image/jpeg', 0.9);
-        
-        // 1. Download automatically
-        const link = document.createElement('a');
-        link.download = `booth-${Date.now()}.jpg`;
-        link.href = finalData;
-        link.click();
+        const finalData = canvas.toDataURL('image/jpeg', 0.92);
+        const resultImg = document.getElementById('result-img');
+        resultImg.src = finalData;
 
-        // 2. Add to UI Gallery
-        const gallery = document.getElementById('photo-gallery');
-        const div = document.createElement('div');
-        div.className = 'gallery-item';
-        div.innerHTML = `<img src="${finalData}"><button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
-        gallery.prepend(div);
+        // Convert to blob for upload
+        const blob = await (await fetch(finalData)).blob();
 
-        // 3. Fake QR (Offline version)
-        QRCode.toCanvas(document.getElementById('canvas-qr'), "Local Save Only", { width: 150 });
+        // Upload to Supabase Storage
+        showUploadOverlay('Uploading photo...');
+        const publicUrl = await uploadToSupabase(blob);
+        hideUploadOverlay();
+
+        if (publicUrl) {
+            resultImg.dataset.publicUrl = publicUrl;
+            // QR code points to the real public download URL
+            QRCode.toCanvas(document.getElementById('canvas-qr'), publicUrl, {
+                width: 200, margin: 1,
+                color: { dark: '#000000', light: '#ffffff' }
+            });
+        } else {
+            // Fallback: encode a message if upload failed
+            QRCode.toCanvas(document.getElementById('canvas-qr'), 'Upload failed - use download button', {
+                width: 200, margin: 1
+            });
+        }
+
+        resultImg.dataset.dataUrl = finalData;
+        showScreen('screen-result');
     }
+
+    // ---- Supabase Upload ----
+    async function uploadToSupabase(blob) {
+        const fileName = `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+        try {
+            const { data, error } = await sb.storage
+                .from(STORAGE_BUCKET)
+                .upload(fileName, blob, {
+                    contentType: 'image/jpeg',
+                    cacheControl: '86400',
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: urlData, error: urlError } = await sb.storage
+                .from(STORAGE_BUCKET)
+                .createSignedUrl(data.path, 86400); // 24 hours
+
+            if (urlError) throw urlError;
+
+            return urlData.signedUrl;
+        } catch (err) {
+            console.error('Supabase upload failed:', err.message);
+            return null;
+        }
+    }
+
+    // ---- Upload Overlay ----
+    function showUploadOverlay(msg) {
+        const overlay = document.getElementById('upload-overlay');
+        document.getElementById('upload-status').textContent = msg;
+        overlay.classList.add('active');
+    }
+    function hideUploadOverlay() {
+        document.getElementById('upload-overlay').classList.remove('active');
+    }
+
+    // ---- Auto-cleanup: delete photos older than 24h ----
+    // Runs once on boot to clean up any expired local references.
+    // Server-side cleanup is handled by a Supabase cron/Edge Function (see README).
+    async function cleanupExpiredPhotos() {
+        try {
+            const { data: files, error } = await sb.storage
+                .from(STORAGE_BUCKET)
+                .list('', { limit: 500, sortBy: { column: 'created_at', order: 'asc' } });
+            if (error || !files) return;
+
+            const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const expired = files
+                .filter(f => new Date(f.created_at) < cutoff)
+                .map(f => f.name);
+
+            if (expired.length > 0) {
+                await sb.storage.from(STORAGE_BUCKET).remove(expired);
+                console.log(`Cleaned up ${expired.length} expired photo(s)`);
+            }
+        } catch (err) {
+            console.warn('Cleanup skipped:', err.message);
+        }
+    }
+    // Run cleanup on page load
+    cleanupExpiredPhotos();
+
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    // ---- Download Button ----
+    document.getElementById('btn-download').addEventListener('click', () => {
+        const dataUrl = document.getElementById('result-img').dataset.dataUrl;
+        if (!dataUrl) return;
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `photos-${Date.now()}.jpg`;
+        a.click();
+    });
+
+    // ---- New Session ----
+    document.getElementById('btn-new-session').addEventListener('click', () => {
+        sessionPhotos = [];
+        selectedFrame = null;
+        document.querySelectorAll('.frame-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById('btn-start-session').classList.remove('ready');
+        document.getElementById('frame-overlay').style.display = 'none';
+        showScreen('screen-frames');
+    });
 </script>
 </body>
 </html>
