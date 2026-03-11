@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Festival Photobooth 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    
+    <style>
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f8fafc; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+        
+        /* Lock Screen */
+        #lock-screen { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .lock-card { background: var(--panel); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; width: 220px; background: #0f172a; color: white; }
+        .admin-btn { background: var(--accent); color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+
+        /* Main Grid Layout */
+        .app-grid { display: grid; grid-template-columns: 220px 1fr 280px; grid-template-rows: 70px 1fr 200px; height: 100vh; }
+        header { grid-column: span 3; background: var(--panel); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid #334155; }
+        
+        /* Sidebar: Frames */
+        .frames-sidebar { border-right: 1px solid #334155; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: rgba(30, 41, 59, 0.5); }
+        .frame-item { width: 100%; border: 3px solid transparent; cursor: pointer; border-radius: 12px; transition: 0.3s; background: #000; aspect-ratio: 3/2; object-fit: cover;}
+        .frame-item.active { border-color: var(--accent); transform: scale(0.96); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+
+        /* Center: Camera */
+        .camera-container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; padding: 20px; }
+        #video-wrapper { position: relative; width: 100%; max-width: 800px; aspect-ratio: 3/2; border: 6px solid var(--panel); border-radius: 20px; overflow: hidden; background: #111; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #frame-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        #countdown-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 180px; font-weight: 900; z-index: 20; background: rgba(0,0,0,0.3); color: white; }
+        #flash-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 30; opacity: 0; background: white; }
+        #status-msg { margin-top: 15px; color: #94a3b8; font-weight: 500; }
+
+        .capture-btn { margin-top: 25px; background: white; color: black; border: none; padding: 18px 50px; border-radius: 50px; font-weight: 900; font-size: 1.4rem; cursor: pointer; transition: 0.2s; }
+        .capture-btn:disabled { background: #475569; cursor: not-allowed; }
+
+        /* Right: Sidebar */
+        .qr-sidebar { border-left: 1px solid #334155; padding: 30px; display: flex; flex-direction: column; align-items: center; background: rgba(30, 41, 59, 0.5); }
+        .qr-container { background: white; padding: 10px; border-radius: 10px; margin: 20px 0; }
+        
+        /* Bottom: Gallery */
+        footer { grid-column: span 3; border-top: 1px solid #334155; padding: 20px; display: flex; gap: 20px; overflow-x: auto; background: var(--panel); }
+        .gallery-item { position: relative; height: 100%; aspect-ratio: 3/2; flex-shrink: 0; border-radius: 12px; overflow: hidden; border: 2px solid #334155; }
+        .gallery-item img { height: 100%; width: 100%; object-fit: cover; }
+        .del-btn { position: absolute; top: 5px; right: 5px; background: #ef4444; border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="lock-screen">
+        <div class="lock-card">
+            <h1>Booth Admin</h1>
+            <input type="password" id="pass-input" placeholder="Password (school2026)">
+            <button class="admin-btn" onclick="checkPass()">Unlock Booth</button>
+        </div>
+    </div>
+
+    <div class="app-grid">
+        <header>
+            <h2 style="margin:0;">SCHOOL FEST '26</h2>
+            <div style="font-weight: bold; color: var(--accent);">OFFLINE MODE</div>
+        </header>
+
+        <aside class="frames-sidebar">
+            <p style="font-size: 11px; font-weight: 800; color: #64748b; margin:0">1. SELECT FRAME</p>
+            <img src="frame1.png" alt="Frame 1" class="frame-item" onclick="setFrame(this)">
+            <img src="frame2.png" alt="Frame 2" class="frame-item" onclick="setFrame(this)">
+        </aside>
+
+        <main class="camera-container">
+            <div id="video-wrapper">
+                <div id="countdown-overlay">3</div>
+                <div id="flash-overlay"></div>
+                <video id="webcam" autoplay playsinline></video>
+                <img id="frame-overlay" style="display:none;">
+            </div>
+            <div id="status-msg">Pick a frame to start</div>
+            <button class="capture-btn" id="main-action-btn" onclick="startPhotoSession()">START SESSION</button>
+        </main>
+
+        <aside class="qr-sidebar">
+            <p style="font-weight: bold; margin:0">2. LOCAL PREVIEW</p>
+            <div class="qr-container">
+                <canvas id="canvas-qr" width="150" height="150"></canvas>
+            </div>
+            <p style="font-size: 11px; color: #94a3b8; text-align: center;">Photo will download automatically once finished.</p>
+        </aside>
+
+        <footer id="photo-gallery"></footer>
+    </div>
+
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+<script>
+    let sessionPhotos = [];
+    let isProcessing = false;
+
+    // --- 1. ADMIN LOCK ---
+    window.checkPass = function() {
+        const passInput = document.getElementById('pass-input');
+        if (passInput.value === "school2026") {
+            document.getElementById('lock-screen').style.display = 'none';
+            startCamera();
+        } else {
+            alert("Incorrect password.");
+        }
+    };
+
+    // --- 2. CAMERA SETUP ---
+    window.startCamera = function() {
+        const video = document.getElementById('webcam');
+        navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => alert("Camera error: " + err.message));
+    };
+
+    // --- 3. UI LOGIC ---
+    window.setFrame = function(el) {
+        const overlay = document.getElementById('frame-overlay');
+        document.querySelectorAll('.frame-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        overlay.src = el.src;
+        overlay.style.display = 'block';
+        document.getElementById('status-msg').innerText = "Ready! Click START.";
+    };
+
+    // --- 4. PHOTO SESSION ---
+    window.startPhotoSession = async function() {
+        const overlay = document.getElementById('frame-overlay');
+        const actionBtn = document.getElementById('main-action-btn');
+        const statusMsg = document.getElementById('status-msg');
+
+        if (!overlay.src || overlay.style.display === 'none') return alert("Pick a frame first!");
+        if (isProcessing) return;
+
+        isProcessing = true;
+        actionBtn.disabled = true;
+        sessionPhotos = [];
+
+        for (let i = 1; i <= 4; i++) {
+            statusMsg.innerText = `Pose! Shot ${i} of 4`;
+            await runCountdown();
+            captureCurrentFrame();
+            triggerFlash();
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        statusMsg.innerText = "Generating your photo...";
+        await processAndSave();
+        
+        isProcessing = false;
+        actionBtn.disabled = false;
+        statusMsg.innerText = "Done! Photo downloaded.";
+    };
+
+    function runCountdown() {
+        return new Promise(resolve => {
+            const countdownEl = document.getElementById('countdown-overlay');
+            let count = 3;
+            countdownEl.style.display = 'flex';
+            countdownEl.innerText = count;
+            const timer = setInterval(() => {
+                count--;
+                if (count <= 0) {
+                    clearInterval(timer);
+                    countdownEl.style.display = 'none';
+                    resolve();
+                } else { countdownEl.innerText = count; }
+            }, 800);
+        });
+    }
+
+    function triggerFlash() {
+        const flash = document.getElementById('flash-overlay');
+        flash.style.opacity = '1';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    }
+
+    function captureCurrentFrame() {
+        const video = document.getElementById('webcam');
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        const tCtx = tempCanvas.getContext('2d');
+        // Mirror the image to match video preview
+        tCtx.translate(tempCanvas.width, 0);
+        tCtx.scale(-1, 1);
+        tCtx.drawImage(video, 0, 0);
+        sessionPhotos.push(tempCanvas.toDataURL('image/jpeg', 0.9));
+    }
+
+    async function processAndSave() {
+        const canvas = document.getElementById('hidden-canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('frame-overlay');
+        
+        // High-res output
+        canvas.width = 1800;
+        canvas.height = 1200;
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 1800, 1200);
+
+        // Draw the 4 photos in a grid
+        const coords = [{x: 40, y: 40}, {x: 920, y: 40}, {x: 40, y: 620}, {x: 920, y: 620}];
+        for (let i = 0; i < 4; i++) {
+            const img = await new Promise(r => { 
+                const im = new Image(); im.src = sessionPhotos[i]; im.onload = () => r(im); 
+            });
+            ctx.drawImage(img, coords[i].x, coords[i].y, 840, 540);
+        }
+
+        // Layer the frame on top
+        const frameImg = await new Promise(r => {
+            const im = new Image(); im.src = overlay.src; im.onload = () => r(im);
+        });
+        ctx.drawImage(frameImg, 0, 0, 1800, 1200);
+
+        const finalData = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // 1. Download automatically
+        const link = document.createElement('a');
+        link.download = `booth-${Date.now()}.jpg`;
+        link.href = finalData;
+        link.click();
+
+        // 2. Add to UI Gallery
+        const gallery = document.getElementById('photo-gallery');
+        const div = document.createElement('div');
+        div.className = 'gallery-item';
+        div.innerHTML = `<img src="${finalData}"><button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+        gallery.prepend(div);
+
+        // 3. Fake QR (Offline version)
+        QRCode.toCanvas(document.getElementById('canvas-qr'), "Local Save Only", { width: 150 });
+    }
+</script>
+</body>
+</html>
