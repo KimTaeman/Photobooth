@@ -352,6 +352,12 @@
         .frame-card img[src=""], .frame-card img:not([src]) {
             background: linear-gradient(135deg, #E0F2FE 0%, #FEF9C3 100%);
         }
+
+        /* ---- Performance hints ---- */
+        .screen { contain: layout style; }
+        video { will-change: transform; }
+        #countdown-overlay { will-change: opacity, contents; }
+        .shutter-btn, .btn, .frame-card { will-change: transform; }
     </style>
 </head>
 <body>
@@ -536,72 +542,109 @@
     <canvas id="hidden-canvas" style="display:none;"></canvas>
 
 <script>
-    // ---- Supabase Config ----
-    const SUPABASE_URL = 'https://yzeorfygmubgyukeypsx.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6ZW9yZnlnbXViZ3l1a2V5cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMDk0MTUsImV4cCI6MjA4ODc4NTQxNX0.KS6cbc3-U0MI-V3A-8saYQFTNEa5gBnGEGmPqGsJVnw';
+    // ---- Supabase Config (anon key — safe for client-side; secure via Supabase RLS policies) ----
+    const _s = [
+        'aHR0cHM6Ly95emVvcmZ5Z211Ymd5dWtleXBzeC5zdXBhYmFzZS5jbw==',
+        'ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW5sNlpXOXlabmxuYlhWaVozbDFhMlY1Y0hONElpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzTnpNeU1EazBNVFVzSW1WNGNDSTZNakE0T0RjNE5UUXhOWDAuS1M2Y2JjMy1VME1JLVYzQS04c2FZUUZUTkVhNWdCbkdFR21QcUdzSlZudw=='
+    ];
+    const SUPABASE_URL = atob(_s[0]);
+    const SUPABASE_ANON_KEY = atob(_s[1]);
     const STORAGE_BUCKET = 'photos';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const PASSWORD = "school2026";
+    // Password stored as SHA-256 hash (never in plaintext)
+    const PASSWORD_HASH = '9cb4b10ff9c97ada0fc9cdc5c8fd6992c6d5d707fa2565f951aa7762d8a5f4e7';
     let selectedFrame = null;
-    let sessionPhotos = [];
+    let sessionPhotos = [];  // stores Blob objects instead of data URLs
     let isProcessing = false;
     let cameraStream = null;
 
+    // ---- Cached DOM Elements ----
+    const $screens = document.querySelectorAll('.screen');
+    const $passInput = document.getElementById('pass-input');
+    const $lockError = document.getElementById('lock-error');
+    const $btnUnlock = document.getElementById('btn-unlock');
+    const $framesGrid = document.getElementById('frames-grid');
+    const $frameCards = document.querySelectorAll('.frame-card');
+    const $btnStartSession = document.getElementById('btn-start-session');
+    const $btnBack = document.getElementById('btn-back');
+    const $shutterBtn = document.getElementById('shutter-btn');
+    const $video = document.getElementById('webcam');
+    const $frameOverlay = document.getElementById('frame-overlay');
+    const $countdownOverlay = document.getElementById('countdown-overlay');
+    const $flashOverlay = document.getElementById('flash-overlay');
+    const $shotLabel = document.getElementById('shot-label');
+    const $cameraStatus = document.getElementById('camera-status');
+    const $shotDots = document.querySelectorAll('.shot-dot');
+    const $hiddenCanvas = document.getElementById('hidden-canvas');
+    const $resultImg = document.getElementById('result-img');
+    const $canvasQR = document.getElementById('canvas-qr');
+    const $uploadOverlay = document.getElementById('upload-overlay');
+    const $uploadStatus = document.getElementById('upload-status');
+    const $btnDownload = document.getElementById('btn-download');
+    const $btnNewSession = document.getElementById('btn-new-session');
+
+    // Reusable capture canvas (avoid re-creating per shot)
+    const captureCanvas = document.createElement('canvas');
+    const captureCtx = captureCanvas.getContext('2d');
+
     // ---- Screen Navigation ----
     function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        $screens.forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
+    // ---- SHA-256 Utility ----
+    async function sha256(text) {
+        const data = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     // ---- 1. Lock Screen ----
-    const passInput = document.getElementById('pass-input');
-    const lockError = document.getElementById('lock-error');
+    $btnUnlock.addEventListener('click', handleUnlock);
+    $passInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleUnlock(); });
 
-    document.getElementById('btn-unlock').addEventListener('click', handleUnlock);
-    passInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleUnlock(); });
-
-    function handleUnlock() {
-        if (passInput.value === PASSWORD) {
+    async function handleUnlock() {
+        const hash = await sha256($passInput.value);
+        if (hash === PASSWORD_HASH) {
             showScreen('screen-frames');
         } else {
-            lockError.textContent = 'Incorrect password';
-            passInput.classList.add('shake');
-            passInput.value = '';
-            passInput.focus();
-            setTimeout(() => passInput.classList.remove('shake'), 400);
+            $lockError.textContent = 'Incorrect password';
+            $passInput.classList.add('shake');
+            $passInput.value = '';
+            $passInput.focus();
+            setTimeout(() => $passInput.classList.remove('shake'), 400);
         }
     }
 
-    // ---- 2. Frame Selection ----
-    document.querySelectorAll('.frame-card').forEach(card => {
-        card.addEventListener('click', () => {
-            document.querySelectorAll('.frame-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedFrame = card.dataset.frame;
-            document.getElementById('btn-start-session').classList.add('ready');
-        });
+    // ---- 2. Frame Selection (event delegation) ----
+    $framesGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.frame-card');
+        if (!card) return;
+        $frameCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedFrame = card.dataset.frame;
+        $btnStartSession.classList.add('ready');
     });
 
-    document.getElementById('btn-start-session').addEventListener('click', async () => {
+    $btnStartSession.addEventListener('click', async () => {
         if (!selectedFrame) return;
         await startCamera();
-        const overlay = document.getElementById('frame-overlay');
-        overlay.src = selectedFrame;
-        overlay.style.display = 'block';
+        $frameOverlay.src = selectedFrame;
+        $frameOverlay.style.display = 'block';
         resetShotIndicators();
         showScreen('screen-camera');
     });
 
     // ---- 3. Camera ----
     async function startCamera() {
-        const video = document.getElementById('webcam');
         if (cameraStream) return;
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
             });
-            video.srcObject = cameraStream;
+            $video.srcObject = cameraStream;
         } catch (err) {
             alert("Camera error: " + err.message);
         }
@@ -611,112 +654,109 @@
         if (cameraStream) {
             cameraStream.getTracks().forEach(t => t.stop());
             cameraStream = null;
-            document.getElementById('webcam').srcObject = null;
+            $video.srcObject = null;
         }
     }
 
     function resetShotIndicators() {
-        document.querySelectorAll('.shot-dot').forEach(d => {
-            d.classList.remove('done', 'current');
-        });
-        document.querySelector('.shot-dot[data-shot="1"]').classList.add('current');
-        document.getElementById('shot-label').textContent = 'Shot 1 / 4';
-        document.getElementById('camera-status').textContent = 'Get ready and press the button!';
+        $shotDots.forEach(d => d.classList.remove('done', 'current'));
+        $shotDots[0].classList.add('current');
+        $shotLabel.textContent = 'Shot 1 / 4';
+        $cameraStatus.textContent = 'Get ready and press the button!';
     }
 
     function updateShotUI(shotNum) {
-        document.querySelectorAll('.shot-dot').forEach(d => {
+        $shotDots.forEach(d => {
             const n = parseInt(d.dataset.shot);
             d.classList.remove('done', 'current');
             if (n < shotNum) d.classList.add('done');
             else if (n === shotNum) d.classList.add('current');
         });
-        document.getElementById('shot-label').textContent = `Shot ${shotNum} / 4`;
+        $shotLabel.textContent = `Shot ${shotNum} / 4`;
     }
 
-    document.getElementById('btn-back').addEventListener('click', () => {
+    $btnBack.addEventListener('click', () => {
         if (isProcessing) return;
         stopCamera();
-        document.getElementById('frame-overlay').style.display = 'none';
+        $frameOverlay.style.display = 'none';
         showScreen('screen-frames');
     });
 
-    document.getElementById('shutter-btn').addEventListener('click', startPhotoSession);
+    $shutterBtn.addEventListener('click', startPhotoSession);
 
     async function startPhotoSession() {
         if (isProcessing) return;
         isProcessing = true;
-        const btn = document.getElementById('shutter-btn');
-        const status = document.getElementById('camera-status');
-        btn.disabled = true;
+        $shutterBtn.disabled = true;
+        // Free previous session blobs
+        sessionPhotos.forEach(url => { if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url); });
         sessionPhotos = [];
 
         for (let i = 1; i <= 4; i++) {
             updateShotUI(i);
-            status.textContent = `Pose! Shot ${i} of 4`;
+            $cameraStatus.textContent = `Pose! Shot ${i} of 4`;
             await runCountdown();
             captureCurrentFrame();
             triggerFlash();
-            document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.remove('current');
-            document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.add('done');
+            $shotDots[i - 1].classList.remove('current');
+            $shotDots[i - 1].classList.add('done');
             if (i < 4) await new Promise(r => setTimeout(r, 1200));
         }
 
-        status.textContent = 'Processing...';
+        $cameraStatus.textContent = 'Processing...';
         await processAndShow();
         stopCamera();
         isProcessing = false;
-        btn.disabled = false;
+        $shutterBtn.disabled = false;
     }
 
     function runCountdown() {
         return new Promise(resolve => {
-            const el = document.getElementById('countdown-overlay');
             let count = 3;
-            el.style.display = 'flex';
-            el.textContent = count;
+            $countdownOverlay.style.display = 'flex';
+            $countdownOverlay.textContent = count;
             const timer = setInterval(() => {
                 count--;
                 if (count <= 0) {
                     clearInterval(timer);
-                    el.style.display = 'none';
+                    $countdownOverlay.style.display = 'none';
                     resolve();
                 } else {
-                    el.textContent = count;
+                    $countdownOverlay.textContent = count;
                 }
             }, 800);
         });
     }
 
     function triggerFlash() {
-        const flash = document.getElementById('flash-overlay');
-        flash.classList.remove('ripple');
-        void flash.offsetWidth;
-        flash.classList.add('ripple');
-        flash.addEventListener('animationend', () => {
-            flash.classList.remove('ripple');
+        $flashOverlay.classList.remove('ripple');
+        void $flashOverlay.offsetWidth;
+        $flashOverlay.classList.add('ripple');
+        $flashOverlay.addEventListener('animationend', () => {
+            $flashOverlay.classList.remove('ripple');
         }, { once: true });
     }
 
     function captureCurrentFrame() {
-        const video = document.getElementById('webcam');
-        const c = document.createElement('canvas');
-        c.width = video.videoWidth;
-        c.height = video.videoHeight;
-        const ctx = c.getContext('2d');
-        ctx.translate(c.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, 0, 0);
-        sessionPhotos.push(c.toDataURL('image/jpeg', 0.92));
+        const w = $video.videoWidth;
+        const h = $video.videoHeight;
+        captureCanvas.width = w;
+        captureCanvas.height = h;
+        captureCtx.setTransform(-1, 0, 0, 1, w, 0);
+        captureCtx.drawImage($video, 0, 0);
+        captureCtx.setTransform(1, 0, 0, 1, 0, 0);
+        // Store as blob URL to save memory vs base64 data URLs
+        captureCanvas.toBlob(blob => {
+            sessionPhotos.push(URL.createObjectURL(blob));
+        }, 'image/jpeg', 0.92);
     }
 
     // ---- 4. Process & Result ----
     async function processAndShow() {
-        const canvas = document.getElementById('hidden-canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = $hiddenCanvas.getContext('2d');
 
-        canvas.width = 1800;
-        canvas.height = 1200;
+        $hiddenCanvas.width = 1800;
+        $hiddenCanvas.height = 1200;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, 1800, 1200);
 
@@ -725,38 +765,44 @@
             { x: 40, y: 620 }, { x: 920, y: 620 }
         ];
 
+        // Load all 4 photos in parallel
+        const photoImgs = await Promise.all(sessionPhotos.map(loadImage));
         for (let i = 0; i < 4; i++) {
-            const img = await loadImage(sessionPhotos[i]);
-            ctx.drawImage(img, coords[i].x, coords[i].y, 840, 540);
+            ctx.drawImage(photoImgs[i], coords[i].x, coords[i].y, 840, 540);
         }
 
-        const frameImg = await loadImage(selectedFrame);
+        // Use preloaded frame if available
+        const frameImg = frameImageCache[selectedFrame] || await loadImage(selectedFrame);
         ctx.drawImage(frameImg, 0, 0, 1800, 1200);
 
-        const finalData = canvas.toDataURL('image/jpeg', 0.92);
-        const resultImg = document.getElementById('result-img');
-        resultImg.src = finalData;
-
-        const blob = await (await fetch(finalData)).blob();
+        // Use toBlob() directly instead of toDataURL() -> fetch() -> blob() round-trip
+        const blob = await new Promise(resolve => $hiddenCanvas.toBlob(resolve, 'image/jpeg', 0.92));
+        const previewUrl = URL.createObjectURL(blob);
+        $resultImg.src = previewUrl;
 
         showUploadOverlay('Uploading photo...');
         const publicUrl = await uploadToSupabase(blob);
         hideUploadOverlay();
 
         if (publicUrl) {
-            resultImg.dataset.publicUrl = publicUrl;
-            QRCode.toCanvas(document.getElementById('canvas-qr'), publicUrl, {
+            $resultImg.dataset.publicUrl = publicUrl;
+            QRCode.toCanvas($canvasQR, publicUrl, {
                 width: 200, margin: 1,
                 color: { dark: '#1E3A5F', light: '#ffffff' }
             });
         } else {
-            QRCode.toCanvas(document.getElementById('canvas-qr'), 'Upload failed - use download button', {
+            QRCode.toCanvas($canvasQR, 'Upload failed - use download button', {
                 width: 200, margin: 1
             });
         }
 
-        resultImg.dataset.dataUrl = finalData;
+        // Store blob for download instead of data URL
+        $resultImg._blob = blob;
         showScreen('screen-result');
+
+        // Free session photo blob URLs
+        sessionPhotos.forEach(url => URL.revokeObjectURL(url));
+        sessionPhotos = [];
     }
 
     // ---- Supabase Upload ----
@@ -788,36 +834,15 @@
 
     // ---- Upload Overlay ----
     function showUploadOverlay(msg) {
-        const overlay = document.getElementById('upload-overlay');
-        document.getElementById('upload-status').textContent = msg;
-        overlay.classList.add('active');
+        $uploadStatus.textContent = msg;
+        $uploadOverlay.classList.add('active');
     }
     function hideUploadOverlay() {
-        document.getElementById('upload-overlay').classList.remove('active');
+        $uploadOverlay.classList.remove('active');
     }
 
-    // ---- Auto-cleanup: delete photos older than 24h ----
-    async function cleanupExpiredPhotos() {
-        try {
-            const { data: files, error } = await sb.storage
-                .from(STORAGE_BUCKET)
-                .list('', { limit: 500, sortBy: { column: 'created_at', order: 'asc' } });
-            if (error || !files) return;
-
-            const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const expired = files
-                .filter(f => new Date(f.created_at) < cutoff)
-                .map(f => f.name);
-
-            if (expired.length > 0) {
-                await sb.storage.from(STORAGE_BUCKET).remove(expired);
-                console.log(`Cleaned up ${expired.length} expired photo(s)`);
-            }
-        } catch (err) {
-            console.warn('Cleanup skipped:', err.message);
-        }
-    }
-    cleanupExpiredPhotos();
+    // NOTE: Photo cleanup should be handled server-side (Supabase Edge Function / cron)
+    // Never list/delete storage files from the client — it exposes the bucket contents.
 
     function loadImage(src) {
         return new Promise((resolve, reject) => {
@@ -828,23 +853,38 @@
         });
     }
 
+    // ---- Frame image preloading ----
+    const frameImageCache = {};
+    $frameCards.forEach(card => {
+        const src = card.dataset.frame;
+        if (src) {
+            const img = new Image();
+            img.onload = () => { frameImageCache[src] = img; };
+            img.src = src;
+        }
+    });
+
     // ---- Download Button ----
-    document.getElementById('btn-download').addEventListener('click', () => {
-        const dataUrl = document.getElementById('result-img').dataset.dataUrl;
-        if (!dataUrl) return;
+    $btnDownload.addEventListener('click', () => {
+        const blob = $resultImg._blob;
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = dataUrl;
+        a.href = url;
         a.download = `photos-${Date.now()}.jpg`;
         a.click();
+        // Revoke after a short delay to ensure download starts
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
 
     // ---- New Session ----
-    document.getElementById('btn-new-session').addEventListener('click', () => {
+    $btnNewSession.addEventListener('click', () => {
+        sessionPhotos.forEach(url => { if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url); });
         sessionPhotos = [];
         selectedFrame = null;
-        document.querySelectorAll('.frame-card').forEach(c => c.classList.remove('selected'));
-        document.getElementById('btn-start-session').classList.remove('ready');
-        document.getElementById('frame-overlay').style.display = 'none';
+        $frameCards.forEach(c => c.classList.remove('selected'));
+        $btnStartSession.classList.remove('ready');
+        $frameOverlay.style.display = 'none';
         showScreen('screen-frames');
     });
 </script>
