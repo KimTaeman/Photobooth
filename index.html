@@ -3,53 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Festival Photobooth 2026</title>
+    <title>Summer Splash Photobooth 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <style>
         :root {
-            --bg: #0a0a0f;
-            --panel: #16161d;
-            --card: #1e1e28;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.4);
-            --text: #f0f0f5;
-            --muted: #6b7280;
+            --sky: #BAE6FD;
+            --white: #FFFFFF;
+            --yellow: #FEF08A;
+            --yellow-deep: #FACC15;
+            --blue: #3B82F6;
+            --blue-light: #60A5FA;
+            --bg-gradient: radial-gradient(ellipse at 50% 30%, #FFF9DB 0%, #FEF9C3 25%, #FFFDF5 60%, #FFFFFF 100%);
+            --glass: rgba(255, 255, 255, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --glass-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
+            --text: #1E3A5F;
+            --text-muted: #64748B;
             --success: #22c55e;
-            --danger: #ef4444;
+            --danger: #EF4444;
+            --radius: 24px;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        /* ---- Shared Screen Base ---- */
+        body, html {
+            height: 100%;
+            font-family: 'Nunito', 'Varela Round', system-ui, sans-serif;
+            /* background: var(--bg-gradient); */
+            background-image: url('background.png');
+            background-size: cover;
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .shot-label, .frame-label {
+            font-family: 'Fredoka', 'Quicksand', sans-serif;
+        }
+
+        /* ---- Shared Screen ---- */
         .screen {
             position: fixed; inset: 0; z-index: 10;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--bg);
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: var(--bg-gradient);
             transition: opacity 0.4s ease;
         }
         .screen.active { display: flex; }
 
+        /* ---- SVG Stickers ---- */
+        .sticker {
+            position: fixed; pointer-events: none; z-index: 55; opacity: 0.35;
+        }
+        .sticker-tl { top: 30px; left: 30px; }
+        .sticker-tr { top: 30px; right: 30px; }
+        .sticker-bl { bottom: 30px; left: 30px; }
+        .sticker-br { bottom: 30px; right: 30px; }
+        .sticker-ml { top: 50%; left: 20px; transform: translateY(-50%); }
+        .sticker-mr { top: 50%; right: 20px; transform: translateY(-50%); }
+
+        /* ---- Glassmorphism Panel ---- */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1.5px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow);
+        }
+
+        /* ---- Buttons ---- */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 32px; border-radius: 50px; border: none;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600; font-size: 1rem; cursor: pointer;
+            transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
+        }
+        .btn:hover { transform: scale(1.07); }
+        .btn:active { transform: scale(0.96); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--yellow) 0%, var(--yellow-deep) 100%);
+            color: #92400E;
+            box-shadow: 0 4px 20px rgba(250, 204, 21, 0.4);
+        }
+        .btn-primary:hover { box-shadow: 0 8px 30px rgba(250, 204, 21, 0.5); }
+
+        .btn-blue {
+            background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue) 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+        }
+        .btn-blue:hover { box-shadow: 0 8px 30px rgba(59, 130, 246, 0.45); }
+
+        .btn-outline {
+            background: var(--glass); color: var(--blue);
+            border: 2px solid var(--sky);
+            backdrop-filter: blur(10px);
+        }
+        .btn-outline:hover { border-color: var(--blue); background: rgba(186, 230, 253, 0.3); }
+
+        .btn-lg { padding: 18px 48px; font-size: 1.2rem; }
+        .btn-block { width: 100%; margin-top: 18px; }
+
         /* ---- Lock Screen ---- */
-        #screen-lock { z-index: 50; background: linear-gradient(135deg, #0a0a1a 0%, #1a1028 100%); }
-        .lock-icon { font-size: 64px; margin-bottom: 20px; }
+        #screen-lock {
+            z-index: 50;
+            background: url('background.png') center/cover no-repeat;
+        }
+        #screen-lock::before {
+            content: ''; position: absolute; inset: 0;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 0;
+        }
+        #screen-lock > * { position: relative; z-index: 1; }
         .lock-card {
-            background: var(--card); padding: 48px 40px; border-radius: 24px;
-            text-align: center; border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-            min-width: 360px;
+            padding: 48px 44px; text-align: center; min-width: 380px;
         }
-        .lock-card h1 { font-size: 1.5rem; margin-bottom: 8px; font-weight: 700; }
-        .lock-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+        .lock-splash-icon {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+        }
+        .lock-card h1 { font-size: 1.8rem; margin-bottom: 6px; color: var(--blue); }
+        .lock-card p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
         .lock-input {
-            width: 100%; padding: 14px 18px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1); background: var(--bg);
+            width: 100%; padding: 14px 18px; border-radius: 16px;
+            border: 2px solid var(--sky); background: rgba(255,255,255,0.8);
             color: var(--text); font-size: 1rem; outline: none;
-            transition: border-color 0.2s;
+            font-family: 'Nunito', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .lock-input:focus { border-color: var(--accent); }
+        .lock-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
         .lock-input.shake {
             animation: shake 0.4s ease;
             border-color: var(--danger);
@@ -59,57 +146,47 @@
             20%, 60% { transform: translateX(-8px); }
             40%, 80% { transform: translateX(8px); }
         }
-        .lock-error { color: var(--danger); font-size: 0.8rem; margin-top: 10px; min-height: 20px; }
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 14px 32px; border-radius: 14px; border: none;
-            font-weight: 700; font-size: 1rem; cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.2s;
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn-primary {
-            background: var(--accent); color: white;
-            box-shadow: 0 4px 20px var(--accent-glow);
-        }
-        .btn-primary:hover { box-shadow: 0 6px 30px var(--accent-glow); }
-        .btn-outline {
-            background: transparent; color: var(--text);
-            border: 2px solid rgba(255,255,255,0.15);
-        }
-        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-        .btn-lg { padding: 18px 48px; font-size: 1.2rem; border-radius: 16px; }
-        .btn-block { width: 100%; margin-top: 18px; }
+        .lock-error { color: var(--danger); font-size: 0.8rem; margin-top: 10px; min-height: 20px; font-weight: 600; }
 
-        /* ---- Frame Selection Screen ---- */
-        #screen-frames { background: var(--bg); }
-        .frames-header { margin-bottom: 40px; text-align: center; }
-        .frames-header h1 { font-size: 2rem; font-weight: 800; }
-        .frames-header p { color: var(--muted); margin-top: 8px; }
+        /* ---- Frame Selection ---- */
+        #screen-frames { overflow-y: auto; padding: 40px 20px; }
+        .frames-header { margin-bottom: 36px; text-align: center; }
+        .frames-header h1 { font-size: 2.2rem; color: var(--blue); }
+        .frames-header p { color: var(--text-muted); margin-top: 6px; font-size: 1rem; }
+
         .frames-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px; max-width: 700px; width: 90%; padding: 0 20px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 28px; max-width: 700px; width: 90%;
         }
         .frame-card {
-            position: relative; background: var(--card); border-radius: 20px;
-            overflow: hidden; cursor: pointer; border: 3px solid transparent;
-            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+            position: relative; cursor: pointer;
+            background: var(--white); border-radius: 20px;
+            border: 6px solid var(--white);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+            transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), border-color 0.25s, box-shadow 0.25s;
+            overflow: hidden;
         }
-        .frame-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.1); }
+        .frame-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
         .frame-card.selected {
-            border-color: var(--accent);
-            box-shadow: 0 0 30px var(--accent-glow);
+            border-color: var(--yellow-deep);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3), 0 12px 32px rgba(0,0,0,0.1);
         }
-        .frame-card img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; }
+        .frame-card img {
+            width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block;
+            background: linear-gradient(135deg, #E0F2FE, #FEF9C3);
+        }
         .frame-card .check {
             position: absolute; top: 12px; right: 12px;
-            width: 32px; height: 32px; border-radius: 50%;
-            background: var(--accent); display: none;
-            align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: var(--yellow-deep); color: #92400E;
+            display: none; align-items: center; justify-content: center;
             font-size: 16px; font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         .frame-card.selected .check { display: flex; }
         .frame-card .frame-label {
-            padding: 12px 16px; font-weight: 600; font-size: 0.9rem;
+            padding: 14px 16px; font-weight: 700; font-size: 0.95rem;
+            text-align: center; color: var(--text);
         }
         #btn-start-session {
             margin-top: 36px; opacity: 0.4; pointer-events: none;
@@ -119,37 +196,46 @@
 
         /* ---- Camera Screen ---- */
         #screen-camera {
-            background: #000;
-            justify-content: flex-start;
-            padding: 0;
+            background: linear-gradient(180deg, #F0F9FF 0%, #FFFBEB 100%);
+            justify-content: flex-start; padding: 0;
         }
         .camera-topbar {
             width: 100%; padding: 16px 30px;
             display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,0.6); z-index: 5;
+            z-index: 5;
         }
-        .shot-indicators {
-            display: flex; gap: 10px;
+        .btn-back {
+            background: var(--glass); border: 2px solid var(--sky);
+            color: var(--blue); width: 42px; height: 42px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; backdrop-filter: blur(10px);
+            transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
         }
+        .btn-back:hover { transform: scale(1.1); }
+        .btn-back:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .shot-indicators { display: flex; gap: 10px; }
         .shot-dot {
-            width: 14px; height: 14px; border-radius: 50%;
-            background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+            width: 16px; height: 16px; border-radius: 50%;
+            background: rgba(59, 130, 246, 0.15); border: 2.5px solid var(--sky);
             transition: background 0.3s, border-color 0.3s;
         }
         .shot-dot.done { background: var(--success); border-color: var(--success); }
-        .shot-dot.current { background: var(--accent); border-color: var(--accent); animation: pulse-dot 1s infinite; }
-        @keyframes pulse-dot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-        .shot-label { font-weight: 700; font-size: 0.95rem; }
+        .shot-dot.current { background: var(--blue); border-color: var(--blue); animation: pulse-dot 1s infinite; }
+        @keyframes pulse-dot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+        .shot-label { font-weight: 700; font-size: 1rem; color: var(--blue); }
 
         .camera-viewport {
             flex: 1; width: 100%;
             display: flex; align-items: center; justify-content: center;
             position: relative; overflow: hidden;
+            padding: 10px;
         }
         #video-wrapper {
-            position: relative; width: 90%; max-width: 900px;
-            aspect-ratio: 3/2; border-radius: 20px; overflow: hidden;
-            border: 4px solid rgba(255,255,255,0.08);
+            position: relative; width: 88%; max-width: 860px;
+            aspect-ratio: 3/2; border-radius: 24px; overflow: hidden;
+            border: 12px solid var(--white);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
+            background: #E0F2FE;
         }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         #frame-overlay {
@@ -159,126 +245,237 @@
         #countdown-overlay {
             position: absolute; inset: 0; display: none;
             align-items: center; justify-content: center;
-            font-size: 200px; font-weight: 900; z-index: 20;
-            background: rgba(0,0,0,0.4); color: white;
-            text-shadow: 0 0 60px rgba(255,255,255,0.3);
+            font-family: 'Fredoka', sans-serif;
+            font-size: 200px; font-weight: 700; z-index: 20;
+            background: rgba(255,255,255,0.35); color: var(--blue);
+            text-shadow: 0 4px 30px rgba(59, 130, 246, 0.3);
+            backdrop-filter: blur(4px);
         }
+        /* Ripple flash effect */
         #flash-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            z-index: 30; opacity: 0; background: white;
-            transition: opacity 0.08s;
+            position: absolute; z-index: 30; pointer-events: none;
+            width: 0; height: 0; border-radius: 50%;
+            background: radial-gradient(circle, rgba(186,230,253,0.8) 0%, rgba(186,230,253,0) 70%);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+        #flash-overlay.ripple {
+            animation: ripple-flash 0.6s ease-out forwards;
+        }
+        @keyframes ripple-flash {
+            0% { width: 0; height: 0; opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { width: 250%; height: 250%; opacity: 0; }
         }
 
         .camera-bottom {
-            width: 100%; padding: 24px;
+            width: 100%; padding: 20px;
             display: flex; flex-direction: column; align-items: center;
-            background: rgba(0,0,0,0.6);
         }
-        #camera-status { color: var(--muted); font-weight: 500; margin-bottom: 16px; font-size: 1.1rem; }
+        #camera-status {
+            color: var(--text-muted); font-weight: 700; margin-bottom: 16px;
+            font-size: 1.1rem; font-family: 'Fredoka', sans-serif;
+        }
         .shutter-btn {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: white; border: 5px solid rgba(255,255,255,0.3);
-            cursor: pointer; transition: transform 0.15s;
+            width: 84px; height: 84px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--yellow) 0%, var(--yellow-deep) 100%);
+            border: 5px solid var(--white);
+            box-shadow: 0 6px 24px rgba(250, 204, 21, 0.4);
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
             position: relative;
+            display: flex; align-items: center; justify-content: center;
         }
-        .shutter-btn::after {
-            content: ''; position: absolute; inset: 6px;
-            border-radius: 50%; border: 3px solid rgba(0,0,0,0.15);
+        .shutter-btn:hover { transform: scale(1.1); box-shadow: 0 8px 30px rgba(250, 204, 21, 0.5); }
+        .shutter-btn:active { transform: scale(0.92); }
+        .shutter-btn:disabled {
+            background: #CBD5E1; cursor: not-allowed; border-color: #E2E8F0;
+            box-shadow: none;
         }
-        .shutter-btn:active { transform: scale(0.9); }
-        .shutter-btn:disabled { background: #475569; cursor: not-allowed; border-color: #334155; }
+        .shutter-icon { width: 36px; height: 36px; fill: #92400E; }
 
         /* ---- Result Screen ---- */
         #screen-result {
-            background: linear-gradient(180deg, #0a0a1a 0%, #12121f 100%);
+            background: var(--bg-gradient);
             padding: 40px 20px; overflow-y: auto;
         }
         .result-content {
             display: flex; flex-direction: column; align-items: center;
-            gap: 30px; max-width: 800px; width: 100%;
+            gap: 28px; max-width: 800px; width: 100%;
         }
         .result-header { text-align: center; }
-        .result-header h1 { font-size: 2rem; font-weight: 800; }
-        .result-header p { color: var(--muted); margin-top: 6px; }
+        .result-header h1 { font-size: 2.2rem; color: var(--blue); }
+        .result-header p { color: var(--text-muted); margin-top: 6px; font-size: 1rem; }
         .result-photo {
-            width: 100%; max-width: 640px; border-radius: 16px;
-            overflow: hidden; border: 3px solid rgba(255,255,255,0.08);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            width: 100%; max-width: 600px; border-radius: 20px;
+            overflow: hidden; border: 10px solid var(--white);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #E0F2FE, #FEF9C3);
         }
         .result-photo img { width: 100%; display: block; }
         .result-actions {
-            display: flex; gap: 16px; flex-wrap: wrap;
-            justify-content: center;
+            display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
         }
         .qr-section {
-            background: var(--card); border-radius: 20px;
-            padding: 24px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 24px; padding: 28px; text-align: center;
         }
-        .qr-section p { color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+        .qr-section p { color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; }
         .qr-box {
-            background: white; padding: 12px; border-radius: 12px;
-            display: inline-block; margin-top: 12px;
+            background: white; padding: 14px; border-radius: 16px;
+            display: inline-block; margin-top: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+        .expiry-note {
+            color: var(--blue-light); font-size: 0.78rem;
+            margin-top: 6px; font-weight: 600;
         }
 
         /* ---- Upload Spinner ---- */
         .upload-overlay {
             position: fixed; inset: 0; z-index: 60;
             display: none; align-items: center; justify-content: center;
-            background: rgba(10, 10, 15, 0.92);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
             flex-direction: column; gap: 20px;
         }
         .upload-overlay.active { display: flex; }
         .spinner {
             width: 56px; height: 56px; border-radius: 50%;
-            border: 5px solid rgba(255,255,255,0.1);
-            border-top-color: var(--accent);
+            border: 5px solid var(--sky);
+            border-top-color: var(--blue);
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .upload-overlay p { color: var(--muted); font-weight: 600; font-size: 1.1rem; }
-        .upload-error { color: var(--danger); font-size: 0.85rem; margin-top: 8px; }
-        .expiry-note { color: var(--muted); font-size: 0.75rem; margin-top: 6px; opacity: 0.8; }
+        .upload-overlay p { color: var(--text-muted); font-weight: 700; font-size: 1.1rem; font-family: 'Fredoka', sans-serif; }
+
+        /* ---- Image placeholder fallback ---- */
+        .frame-card img[src=""], .frame-card img:not([src]) {
+            background: linear-gradient(135deg, #E0F2FE 0%, #FEF9C3 100%);
+        }
     </style>
 </head>
 <body>
 
+    <!-- SVG Stickers scattered in corners -->
+    <!-- Water splash top-left -->
+    <svg class="sticker sticker-tl" width="80" height="80" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="20" fill="#BAE6FD"/>
+        <ellipse cx="30" cy="30" rx="8" ry="12" transform="rotate(-30 30 30)" fill="#BAE6FD"/>
+        <ellipse cx="70" cy="25" rx="6" ry="10" transform="rotate(20 70 25)" fill="#BAE6FD"/>
+        <ellipse cx="75" cy="65" rx="7" ry="11" transform="rotate(40 75 65)" fill="#BAE6FD"/>
+        <ellipse cx="25" cy="70" rx="6" ry="9" transform="rotate(-20 25 70)" fill="#BAE6FD"/>
+        <circle cx="50" cy="15" r="5" fill="#60A5FA"/>
+        <circle cx="15" cy="50" r="4" fill="#60A5FA"/>
+        <circle cx="85" cy="45" r="4" fill="#60A5FA"/>
+    </svg>
+
+    <!-- Cat top-right -->
+    <svg class="sticker sticker-tr" width="70" height="70" viewBox="0 0 100 100" fill="none">
+        <ellipse cx="50" cy="58" rx="28" ry="24" fill="#FEF08A"/>
+        <polygon points="28,42 22,18 40,34" fill="#FEF08A"/>
+        <polygon points="72,42 78,18 60,34" fill="#FEF08A"/>
+        <polygon points="28,42 22,18 40,34" fill="none" stroke="#FACC15" stroke-width="2"/>
+        <polygon points="72,42 78,18 60,34" fill="none" stroke="#FACC15" stroke-width="2"/>
+        <circle cx="40" cy="52" r="4" fill="#1E3A5F"/>
+        <circle cx="60" cy="52" r="4" fill="#1E3A5F"/>
+        <ellipse cx="50" cy="60" rx="3" ry="2" fill="#F9A8D4"/>
+        <path d="M44 64 Q50 70 56 64" stroke="#1E3A5F" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <line x1="20" y1="55" x2="35" y2="58" stroke="#FACC15" stroke-width="1.5"/>
+        <line x1="20" y1="60" x2="35" y2="60" stroke="#FACC15" stroke-width="1.5"/>
+        <line x1="65" y1="58" x2="80" y2="55" stroke="#FACC15" stroke-width="1.5"/>
+        <line x1="65" y1="60" x2="80" y2="60" stroke="#FACC15" stroke-width="1.5"/>
+    </svg>
+
+    <!-- Water drop bottom-left -->
+    <svg class="sticker sticker-bl" width="60" height="70" viewBox="0 0 60 80" fill="none">
+        <path d="M30 5 Q30 5 10 45 Q10 65 30 75 Q50 65 50 45 Q30 5 30 5Z" fill="#BAE6FD" stroke="#60A5FA" stroke-width="2"/>
+        <ellipse cx="24" cy="48" rx="6" ry="8" fill="rgba(255,255,255,0.5)" transform="rotate(-15 24 48)"/>
+    </svg>
+
+    <!-- Water gun bottom-right -->
+    <svg class="sticker sticker-br" width="90" height="60" viewBox="0 0 120 80" fill="none">
+        <rect x="10" y="30" width="60" height="20" rx="6" fill="#60A5FA"/>
+        <rect x="60" y="25" width="40" height="12" rx="4" fill="#3B82F6"/>
+        <rect x="95" y="22" width="20" height="18" rx="3" fill="#BAE6FD" stroke="#3B82F6" stroke-width="2"/>
+        <rect x="30" y="48" width="14" height="22" rx="4" fill="#60A5FA"/>
+        <circle cx="22" cy="40" r="6" fill="#BAE6FD"/>
+        <line x1="115" y1="28" x2="118" y2="24" stroke="#BAE6FD" stroke-width="3" stroke-linecap="round"/>
+        <line x1="115" y1="31" x2="120" y2="31" stroke="#BAE6FD" stroke-width="3" stroke-linecap="round"/>
+        <line x1="115" y1="35" x2="118" y2="38" stroke="#BAE6FD" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Splash middle-left -->
+    <svg class="sticker sticker-ml" width="50" height="50" viewBox="0 0 60 60" fill="none">
+        <circle cx="30" cy="30" r="12" fill="#FEF08A"/>
+        <circle cx="30" cy="10" r="5" fill="#FEF08A"/>
+        <circle cx="10" cy="30" r="5" fill="#FEF08A"/>
+        <circle cx="50" cy="30" r="5" fill="#FEF08A"/>
+        <circle cx="30" cy="50" r="5" fill="#FEF08A"/>
+        <circle cx="15" cy="15" r="4" fill="#FEF08A"/>
+        <circle cx="45" cy="15" r="4" fill="#FEF08A"/>
+        <circle cx="15" cy="45" r="4" fill="#FEF08A"/>
+        <circle cx="45" cy="45" r="4" fill="#FEF08A"/>
+    </svg>
+
+    <!-- Small drops middle-right -->
+    <svg class="sticker sticker-mr" width="50" height="70" viewBox="0 0 50 70" fill="none">
+        <path d="M15 10 Q15 10 8 25 Q6 33 15 37 Q24 33 22 25Z" fill="#BAE6FD"/>
+        <path d="M35 25 Q35 25 28 40 Q26 48 35 52 Q44 48 42 40Z" fill="#60A5FA" opacity="0.5"/>
+        <path d="M18 45 Q18 45 13 55 Q12 60 18 63 Q24 60 23 55Z" fill="#BAE6FD" opacity="0.7"/>
+    </svg>
+
+
     <!-- SCREEN 1: Lock -->
     <div id="screen-lock" class="screen active">
-        <div class="lock-card">
-            <div class="lock-icon">&#128274;</div>
+        <div class="lock-card glass-card">
+            <!-- Water Splash SVG icon -->
+            <svg class="lock-splash-icon" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="24" fill="#BAE6FD"/>
+                <ellipse cx="30" cy="28" rx="9" ry="14" transform="rotate(-30 30 28)" fill="#BAE6FD"/>
+                <ellipse cx="72" cy="24" rx="7" ry="12" transform="rotate(25 72 24)" fill="#BAE6FD"/>
+                <ellipse cx="76" cy="68" rx="8" ry="13" transform="rotate(35 76 68)" fill="#BAE6FD"/>
+                <ellipse cx="24" cy="72" rx="7" ry="11" transform="rotate(-25 24 72)" fill="#BAE6FD"/>
+                <circle cx="50" cy="12" r="6" fill="#60A5FA"/>
+                <circle cx="12" cy="50" r="5" fill="#60A5FA"/>
+                <circle cx="88" cy="44" r="5" fill="#60A5FA"/>
+                <circle cx="50" cy="88" r="5" fill="#60A5FA"/>
+                <circle cx="50" cy="50" r="12" fill="rgba(255,255,255,0.4)"/>
+            </svg>
             <h1>Photobooth</h1>
             <p>Enter password to unlock the booth</p>
             <input type="password" id="pass-input" class="lock-input" placeholder="Password" autocomplete="off">
             <div id="lock-error" class="lock-error"></div>
-            <button class="btn btn-primary btn-block" id="btn-unlock">Unlock</button>
+            <button class="btn btn-primary btn-block" id="btn-unlock">&#x1F513; Unlock</button>
         </div>
     </div>
 
     <!-- SCREEN 2: Frame Selection -->
     <div id="screen-frames" class="screen">
         <div class="frames-header">
-            <h1>Choose Your Frame</h1>
-            <p>Select a frame for your photo strip</p>
+            <h1>&#x1F3A8; Choose Your Frame</h1>
+            <p>Pick a frame for your photo strip!</p>
         </div>
         <div class="frames-grid" id="frames-grid">
             <div class="frame-card" data-frame="frame1.png">
-                <img src="frame1.png" alt="Frame 1">
+                <img src="frame1.png" alt="Frame 1" onerror="this.style.minHeight='180px'">
                 <div class="check">&#10003;</div>
                 <div class="frame-label">Frame 1</div>
             </div>
             <div class="frame-card" data-frame="frame2.png">
-                <img src="frame2.png" alt="Frame 2">
+                <img src="frame2.png" alt="Frame 2" onerror="this.style.minHeight='180px'">
                 <div class="check">&#10003;</div>
                 <div class="frame-label">Frame 2</div>
             </div>
         </div>
-        <button class="btn btn-primary btn-lg" id="btn-start-session">Start Photo Session</button>
+        <button class="btn btn-primary btn-lg" id="btn-start-session">&#x1F4F7; Start Photo Session</button>
     </div>
 
     <!-- SCREEN 3: Camera -->
     <div id="screen-camera" class="screen">
         <div class="camera-topbar">
+            <button class="btn-back" id="btn-back" title="Back to frames">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
             <div class="shot-indicators" id="shot-indicators">
                 <div class="shot-dot" data-shot="1"></div>
                 <div class="shot-dot" data-shot="2"></div>
@@ -297,7 +494,12 @@
         </div>
         <div class="camera-bottom">
             <div id="camera-status">Get ready and press the button!</div>
-            <button class="shutter-btn" id="shutter-btn"></button>
+            <button class="shutter-btn" id="shutter-btn">
+                <svg class="shutter-icon" viewBox="0 0 24 24">
+                    <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/>
+                    <path d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -305,13 +507,13 @@
     <div id="screen-result" class="screen">
         <div class="result-content">
             <div class="result-header">
-                <h1>Your Photo!</h1>
+                <h1>&#x1F389; Your Photo!</h1>
                 <p>Scan the QR code or tap download</p>
             </div>
             <div class="result-photo">
                 <img id="result-img" src="" alt="Your photo">
             </div>
-            <div class="qr-section">
+            <div class="qr-section glass-card">
                 <div class="qr-box">
                     <canvas id="canvas-qr"></canvas>
                 </div>
@@ -319,8 +521,8 @@
                 <p class="expiry-note">&#9200; Link expires in 24 hours</p>
             </div>
             <div class="result-actions">
-                <button class="btn btn-primary btn-lg" id="btn-download">&#11015; Download</button>
-                <button class="btn btn-outline btn-lg" id="btn-new-session">New Session</button>
+                <button class="btn btn-blue btn-lg" id="btn-download">&#11015; Download</button>
+                <button class="btn btn-outline btn-lg" id="btn-new-session">&#x1F504; New Session</button>
             </div>
         </div>
     </div>
@@ -432,6 +634,13 @@
         document.getElementById('shot-label').textContent = `Shot ${shotNum} / 4`;
     }
 
+    document.getElementById('btn-back').addEventListener('click', () => {
+        if (isProcessing) return;
+        stopCamera();
+        document.getElementById('frame-overlay').style.display = 'none';
+        showScreen('screen-frames');
+    });
+
     document.getElementById('shutter-btn').addEventListener('click', startPhotoSession);
 
     async function startPhotoSession() {
@@ -448,7 +657,6 @@
             await runCountdown();
             captureCurrentFrame();
             triggerFlash();
-            // Mark as done
             document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.remove('current');
             document.querySelector(`.shot-dot[data-shot="${i}"]`).classList.add('done');
             if (i < 4) await new Promise(r => setTimeout(r, 1200));
@@ -482,8 +690,12 @@
 
     function triggerFlash() {
         const flash = document.getElementById('flash-overlay');
-        flash.style.opacity = '1';
-        setTimeout(() => { flash.style.opacity = '0'; }, 120);
+        flash.classList.remove('ripple');
+        void flash.offsetWidth;
+        flash.classList.add('ripple');
+        flash.addEventListener('animationend', () => {
+            flash.classList.remove('ripple');
+        }, { once: true });
     }
 
     function captureCurrentFrame() {
@@ -525,23 +737,19 @@
         const resultImg = document.getElementById('result-img');
         resultImg.src = finalData;
 
-        // Convert to blob for upload
         const blob = await (await fetch(finalData)).blob();
 
-        // Upload to Supabase Storage
         showUploadOverlay('Uploading photo...');
         const publicUrl = await uploadToSupabase(blob);
         hideUploadOverlay();
 
         if (publicUrl) {
             resultImg.dataset.publicUrl = publicUrl;
-            // QR code points to the real public download URL
             QRCode.toCanvas(document.getElementById('canvas-qr'), publicUrl, {
                 width: 200, margin: 1,
-                color: { dark: '#000000', light: '#ffffff' }
+                color: { dark: '#1E3A5F', light: '#ffffff' }
             });
         } else {
-            // Fallback: encode a message if upload failed
             QRCode.toCanvas(document.getElementById('canvas-qr'), 'Upload failed - use download button', {
                 width: 200, margin: 1
             });
@@ -567,7 +775,7 @@
 
             const { data: urlData, error: urlError } = await sb.storage
                 .from(STORAGE_BUCKET)
-                .createSignedUrl(data.path, 86400); // 24 hours
+                .createSignedUrl(data.path, 86400);
 
             if (urlError) throw urlError;
 
@@ -589,8 +797,6 @@
     }
 
     // ---- Auto-cleanup: delete photos older than 24h ----
-    // Runs once on boot to clean up any expired local references.
-    // Server-side cleanup is handled by a Supabase cron/Edge Function (see README).
     async function cleanupExpiredPhotos() {
         try {
             const { data: files, error } = await sb.storage
@@ -611,7 +817,6 @@
             console.warn('Cleanup skipped:', err.message);
         }
     }
-    // Run cleanup on page load
     cleanupExpiredPhotos();
 
     function loadImage(src) {
