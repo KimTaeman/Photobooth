@@ -696,7 +696,7 @@
             updateShotUI(i);
             $cameraStatus.textContent = `Pose! Shot ${i} of 4`;
             await runCountdown();
-            captureCurrentFrame();
+            await captureCurrentFrame();
             triggerFlash();
             $shotDots[i - 1].classList.remove('current');
             $shotDots[i - 1].classList.add('done');
@@ -746,9 +746,13 @@
         captureCtx.drawImage($video, 0, 0);
         captureCtx.setTransform(1, 0, 0, 1, 0, 0);
         // Store as blob URL to save memory vs base64 data URLs
-        captureCanvas.toBlob(blob => {
-            sessionPhotos.push(URL.createObjectURL(blob));
-        }, 'image/jpeg', 0.92);
+        return new Promise(resolve => {
+            captureCanvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                sessionPhotos.push(url);
+                resolve();
+            }, 'image/jpeg', 0.92);
+        });
     }
 
     // ---- 4. Process & Result ----
