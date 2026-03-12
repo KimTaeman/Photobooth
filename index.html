@@ -330,6 +330,29 @@
             margin-top: 6px; font-weight: 600;
         }
 
+        /* ---- Video result ---- */
+        .result-video {
+            width: 100%; max-width: 600px; border-radius: 20px;
+            overflow: hidden; border: 10px solid var(--white);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.1);
+            background: #000;
+        }
+        .result-video video { width: 100%; display: block; border-radius: 10px; }
+
+        /* ---- Recording indicator ---- */
+        .rec-indicator {
+            display: none; align-items: center; gap: 6px;
+            font-family: 'Fredoka', sans-serif; font-weight: 700;
+            font-size: 0.85rem; color: var(--danger);
+        }
+        .rec-indicator.active { display: flex; }
+        .rec-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--danger);
+            animation: rec-blink 1s ease-in-out infinite;
+        }
+        @keyframes rec-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
         /* ---- Upload Spinner ---- */
         .upload-overlay {
             position: fixed; inset: 0; z-index: 60;
@@ -489,6 +512,7 @@
                 <div class="shot-dot" data-shot="4"></div>
             </div>
             <div class="shot-label" id="shot-label">Shot 1 / 4</div>
+            <div class="rec-indicator" id="rec-indicator"><div class="rec-dot"></div>REC</div>
         </div>
         <div class="camera-viewport">
             <div id="video-wrapper">
@@ -513,21 +537,25 @@
     <div id="screen-result" class="screen">
         <div class="result-content">
             <div class="result-header">
-                <h1>&#x1F389; Your Photo!</h1>
-                <p>Scan the QR code or tap download</p>
+                <h1>&#x1F389; Your Photo &amp; Video!</h1>
+                <p>Scan the QR code to download your photo &amp; video</p>
             </div>
             <div class="result-photo">
                 <img id="result-img" src="" alt="Your photo">
+            </div>
+            <div class="result-video" id="result-video-container" style="display:none;">
+                <video id="result-video" controls playsinline></video>
             </div>
             <div class="qr-section glass-card">
                 <div class="qr-box">
                     <canvas id="canvas-qr"></canvas>
                 </div>
-                <p>Scan to download your photo</p>
+                <p>Scan to download your photo &amp; video</p>
                 <p class="expiry-note">&#9200; Link expires in 24 hours</p>
             </div>
             <div class="result-actions">
-                <button class="btn btn-blue btn-lg" id="btn-download">&#11015; Download</button>
+                <button class="btn btn-primary btn-lg" id="btn-download">&#x1F4F7; Download Photo</button>
+                <button class="btn btn-blue btn-lg" id="btn-download-video" style="display:none;">&#x1F3AC; Download Video</button>
                 <button class="btn btn-outline btn-lg" id="btn-new-session">&#x1F504; New Session</button>
             </div>
         </div>
@@ -559,6 +587,14 @@
     let isProcessing = false;
     let cameraStream = null;
 
+    // ---- Video Recording State ----
+    let mediaRecorder = null;
+    let videoChunks = [];
+    let videoRecordCanvas = null;
+    let videoRecordCtx = null;
+    let videoRecordAnimFrame = null;
+    let videoBlob = null;
+
     // ---- Cached DOM Elements ----
     const $screens = document.querySelectorAll('.screen');
     const $passInput = document.getElementById('pass-input');
@@ -583,6 +619,10 @@
     const $uploadStatus = document.getElementById('upload-status');
     const $btnDownload = document.getElementById('btn-download');
     const $btnNewSession = document.getElementById('btn-new-session');
+    const $recIndicator = document.getElementById('rec-indicator');
+    const $resultVideo = document.getElementById('result-video');
+    const $resultVideoContainer = document.getElementById('result-video-container');
+    const $btnDownloadVideo = document.getElementById('btn-download-video');
 
     // Reusable capture canvas (avoid re-creating per shot)
     const captureCanvas = document.createElement('canvas');
@@ -642,11 +682,20 @@
         if (cameraStream) return;
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+                audio: true
             });
             $video.srcObject = cameraStream;
         } catch (err) {
-            alert("Camera error: " + err.message);
+            // Fallback: try without audio
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+                });
+                $video.srcObject = cameraStream;
+            } catch (err2) {
+                alert("Camera error: " + err2.message);
+            }
         }
     }
 
@@ -656,6 +705,69 @@
             cameraStream = null;
             $video.srcObject = null;
         }
+    }
+
+    // ---- Video Recording ----
+    function startVideoRecording() {
+        if (!cameraStream || typeof MediaRecorder === 'undefined') return;
+        try {
+            const w = $video.videoWidth || 1280;
+            const h = $video.videoHeight || 720;
+            videoRecordCanvas = document.createElement('canvas');
+            videoRecordCanvas.width = w;
+            videoRecordCanvas.height = h;
+            videoRecordCtx = videoRecordCanvas.getContext('2d');
+
+            function drawFrame() {
+                if (!videoRecordCtx) return;
+                videoRecordCtx.setTransform(-1, 0, 0, 1, w, 0);
+                videoRecordCtx.drawImage($video, 0, 0, w, h);
+                videoRecordCtx.setTransform(1, 0, 0, 1, 0, 0);
+                videoRecordAnimFrame = requestAnimationFrame(drawFrame);
+            }
+            drawFrame();
+
+            const canvasStream = videoRecordCanvas.captureStream(30);
+            const audioTracks = cameraStream.getAudioTracks();
+            audioTracks.forEach(t => canvasStream.addTrack(t));
+
+            videoChunks = [];
+            const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
+                ? 'video/webm; codecs=vp9'
+                : 'video/webm';
+            mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) videoChunks.push(e.data); };
+            mediaRecorder.start(1000);
+            $recIndicator.classList.add('active');
+        } catch (err) {
+            console.error('Video recording failed to start:', err);
+        }
+    }
+
+    function stopVideoRecording() {
+        $recIndicator.classList.remove('active');
+        return new Promise(resolve => {
+            if (videoRecordAnimFrame) {
+                cancelAnimationFrame(videoRecordAnimFrame);
+                videoRecordAnimFrame = null;
+            }
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                videoRecordCanvas = null;
+                videoRecordCtx = null;
+                resolve(null);
+                return;
+            }
+            mediaRecorder.onstop = () => {
+                const mt = mediaRecorder.mimeType || 'video/webm';
+                const blob = new Blob(videoChunks, { type: mt });
+                videoChunks = [];
+                mediaRecorder = null;
+                videoRecordCanvas = null;
+                videoRecordCtx = null;
+                resolve(blob);
+            };
+            mediaRecorder.stop();
+        });
     }
 
     function resetShotIndicators() {
@@ -692,6 +804,9 @@
         sessionPhotos.forEach(url => { if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url); });
         sessionPhotos = [];
 
+        // Start video recording
+        startVideoRecording();
+
         for (let i = 1; i <= 4; i++) {
             updateShotUI(i);
             $cameraStatus.textContent = `Pose! Shot ${i} of 4`;
@@ -704,6 +819,10 @@
         }
 
         $cameraStatus.textContent = 'Processing...';
+
+        // Stop video recording
+        videoBlob = await stopVideoRecording();
+
         await processAndShow();
         stopCamera();
         isProcessing = false;
@@ -785,12 +904,30 @@
         $resultImg.src = previewUrl;
 
         showUploadOverlay('Uploading photo...');
-        const publicUrl = await uploadToSupabase(blob);
+        const photoUrl = await uploadToSupabase(blob, 'image/jpeg', 'photo', 'jpg');
+
+        // Upload video if available
+        let videoUrl = null;
+        if (videoBlob) {
+            $uploadStatus.textContent = 'Uploading video...';
+            videoUrl = await uploadToSupabase(videoBlob, 'video/webm', 'video', 'webm');
+        }
+
+        // Generate and upload download page
+        let downloadPageUrl = null;
+        if (photoUrl || videoUrl) {
+            $uploadStatus.textContent = 'Generating download page...';
+            const pageHtml = generateDownloadPage(photoUrl, videoUrl);
+            const pageBlob = new Blob([pageHtml], { type: 'text/html' });
+            downloadPageUrl = await uploadToSupabase(pageBlob, 'text/html', 'download', 'html');
+        }
         hideUploadOverlay();
 
-        if (publicUrl) {
-            $resultImg.dataset.publicUrl = publicUrl;
-            QRCode.toCanvas($canvasQR, publicUrl, {
+        // QR code points to the download page (both photo + video)
+        const qrTarget = downloadPageUrl || photoUrl;
+        if (qrTarget) {
+            $resultImg.dataset.publicUrl = qrTarget;
+            QRCode.toCanvas($canvasQR, qrTarget, {
                 width: 200, margin: 1,
                 color: { dark: '#1E3A5F', light: '#ffffff' }
             });
@@ -800,8 +937,21 @@
             });
         }
 
-        // Store blob for download instead of data URL
+        // Store blobs for local download
         $resultImg._blob = blob;
+
+        // Show video preview if available
+        if (videoBlob) {
+            const videoPreviewUrl = URL.createObjectURL(videoBlob);
+            $resultVideo.src = videoPreviewUrl;
+            $resultVideoContainer.style.display = 'block';
+            $btnDownloadVideo.style.display = 'inline-flex';
+            $resultVideo._blob = videoBlob;
+        } else {
+            $resultVideoContainer.style.display = 'none';
+            $btnDownloadVideo.style.display = 'none';
+        }
+
         showScreen('screen-result');
 
         // Free session photo blob URLs
@@ -810,13 +960,13 @@
     }
 
     // ---- Supabase Upload ----
-    async function uploadToSupabase(blob) {
-        const fileName = `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+    async function uploadToSupabase(blob, contentType, prefix, ext) {
+        const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
         try {
             const { data, error } = await sb.storage
                 .from(STORAGE_BUCKET)
                 .upload(fileName, blob, {
-                    contentType: 'image/jpeg',
+                    contentType: contentType,
                     cacheControl: '86400',
                     upsert: false
                 });
@@ -836,6 +986,45 @@
         }
     }
 
+    // ---- Generate Download Page ----
+    function generateDownloadPage(photoUrl, videoUrl) {
+        const safePhotoUrl = photoUrl ? JSON.stringify(photoUrl) : 'null';
+        const safeVideoUrl = videoUrl ? JSON.stringify(videoUrl) : 'null';
+        return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Your Photobooth Memories!</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',system-ui,sans-serif;background:radial-gradient(ellipse at 50% 30%,#FFF9DB 0%,#FEF9C3 25%,#FFFDF5 60%,#FFF 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#1E3A5F}
+.card{background:rgba(255,255,255,0.55);backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,0.7);border-radius:24px;box-shadow:0 8px 32px rgba(59,130,246,0.1);padding:40px;text-align:center;max-width:500px;width:100%}
+h1{font-family:'Fredoka',sans-serif;font-size:2rem;color:#3B82F6;margin-bottom:8px}
+p{color:#64748B;margin-bottom:20px}
+.preview{width:100%;border-radius:16px;overflow:hidden;margin-bottom:20px;border:8px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+.preview img,.preview video{width:100%;display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 32px;border-radius:50px;border:none;font-family:'Fredoka',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;text-decoration:none;margin:8px}
+.btn:hover{transform:scale(1.07)}.btn:active{transform:scale(0.96)}
+.btn-photo{background:linear-gradient(135deg,#FEF08A,#FACC15);color:#92400E;box-shadow:0 4px 20px rgba(250,204,21,0.4)}
+.btn-video{background:linear-gradient(135deg,#60A5FA,#3B82F6);color:#fff;box-shadow:0 4px 20px rgba(59,130,246,0.35)}
+.buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.expiry{color:#60A5FA;font-size:0.78rem;margin-top:16px;font-weight:600}
+</style></head><body>
+<div class="card">
+<h1>&#x1F389; Your Photobooth Memories!</h1>
+<p>Download your photo` + (videoUrl ? ` and video` : ``) + ` below</p>
+` + (photoUrl ? `<div class="preview"><img src="` + photoUrl + `" alt="Your photo"></div>` : ``) + `
+` + (videoUrl ? `<div class="preview"><video src="` + videoUrl + `" controls playsinline></video></div>` : ``) + `
+<div class="buttons">
+` + (photoUrl ? `<button class="btn btn-photo" onclick="dl(` + safePhotoUrl + `,'photo.jpg')">&#x1F4F7; Download Photo</button>` : ``) + `
+` + (videoUrl ? `<button class="btn btn-video" onclick="dl(` + safeVideoUrl + `,'video.webm')">&#x1F3AC; Download Video</button>` : ``) + `
+</div>
+<p class="expiry">&#9200; Links expire in 24 hours</p>
+</div>
+` + '<scr' + 'ipt>' + `
+async function dl(url,name){try{const r=await fetch(url);const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch(e){window.open(url,'_blank')}}
+` + '</' + 'script>' + `</body></html>`;
+    }
+
     // ---- Upload Overlay ----
     function showUploadOverlay(msg) {
         $uploadStatus.textContent = msg;
@@ -851,6 +1040,7 @@
     function loadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
+            img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
             img.onerror = reject;
             img.src = src;
@@ -863,12 +1053,13 @@
         const src = card.dataset.frame;
         if (src) {
             const img = new Image();
+            img.crossOrigin = 'anonymous';
             img.onload = () => { frameImageCache[src] = img; };
             img.src = src;
         }
     });
 
-    // ---- Download Button ----
+    // ---- Download Buttons ----
     $btnDownload.addEventListener('click', () => {
         const blob = $resultImg._blob;
         if (!blob) return;
@@ -877,7 +1068,17 @@
         a.href = url;
         a.download = `photos-${Date.now()}.jpg`;
         a.click();
-        // Revoke after a short delay to ensure download starts
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    $btnDownloadVideo.addEventListener('click', () => {
+        const blob = $resultVideo._blob;
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video-${Date.now()}.webm`;
+        a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
 
@@ -886,6 +1087,13 @@
         sessionPhotos.forEach(url => { if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url); });
         sessionPhotos = [];
         selectedFrame = null;
+        videoBlob = null;
+        if ($resultVideo.src) {
+            URL.revokeObjectURL($resultVideo.src);
+            $resultVideo.src = '';
+        }
+        $resultVideoContainer.style.display = 'none';
+        $btnDownloadVideo.style.display = 'none';
         $frameCards.forEach(c => c.classList.remove('selected'));
         $btnStartSession.classList.remove('ready');
         $frameOverlay.style.display = 'none';
