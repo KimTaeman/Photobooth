@@ -57,25 +57,17 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const generateGif = async (photoImgs: HTMLImageElement[]): Promise<Blob> => {
-    const { default: GIFEncoder } = await import('gif-encoder-2');
-    const w = 480, h = 320;
-    const encoder = new GIFEncoder(w, h);
-    encoder.setDelay(600);
-    encoder.setRepeat(0);
-    encoder.start();
-
-    for (const img of photoImgs) {
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const ctx = c.getContext('2d')!;
-      drawImageCover(ctx, img, 0, 0, w, h);
-      encoder.addFrame(ctx);
-    }
-
-    encoder.finish();
-    const data: number[] = encoder.out.getData();
-    return new Blob([new Uint8Array(data).buffer], { type: 'image/gif' });
+  const generateGif = async (photoUrls: string[]): Promise<Blob> => {
+    const { createGIF } = await import('gifshot');
+    return new Promise((resolve, reject) => {
+      createGIF(
+        { images: photoUrls, gifWidth: 480, gifHeight: 320, interval: 0.6 },
+        (obj) => {
+          if (obj.error) { reject(new Error(obj.errorMsg || 'GIF generation failed')); return; }
+          fetch(obj.image).then(r => r.blob()).then(resolve).catch(reject);
+        }
+      );
+    });
   };
 
   const processAndUpload = async () => {
@@ -133,7 +125,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 5. Generate & upload GIF clip
       setUploadStatus('Generating GIF clip...');
-      const gifBlob = await generateGif(photoImgs);
+      const gifBlob = await generateGif(photos);
       await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
 
       // 6. Log session
