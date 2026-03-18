@@ -1,6 +1,43 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
 
+const audioCtx = { current: null as AudioContext | null };
+
+const getAudioCtx = () => {
+  if (!audioCtx.current) audioCtx.current = new AudioContext();
+  if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
+  return audioCtx.current;
+};
+
+const playTick = () => {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.value = 880;
+  osc.type = 'sine';
+  gain.gain.setValueAtTime(0.25, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.09);
+};
+
+const playShutter = () => {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1100, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(350, ctx.currentTime + 0.12);
+  gain.gain.setValueAtTime(0.35, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.12);
+};
+
 interface CameraScreenProps {
   isActive: boolean;
   selectedFrame: string | null;
@@ -174,12 +211,14 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
       // Countdown
       for (let count = 3; count > 0; count--) {
         setCountdown(count);
+        playTick();
         await new Promise((r) => setTimeout(r, 800));
       }
       setCountdown(null);
 
       const photoUrl = await capturePhoto();
       photos.push(photoUrl);
+      playShutter();
       triggerFlash();
 
       if (i < 4) await new Promise((r) => setTimeout(r, 1200));

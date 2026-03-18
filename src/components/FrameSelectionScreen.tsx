@@ -1,4 +1,5 @@
 import React from 'react';
+import { Palette, Camera } from 'lucide-react';
 import type { Frame } from '../types';
 
 interface FrameSelectionScreenProps {
@@ -22,7 +23,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   return (
     <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`}>
       <div className="frames-header">
-        <h1>🎨 Choose Your Frame</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Palette size={30} /> Choose Your Frame</h1>
         <p>Pick a frame for your photo strip!</p>
       </div>
       <div className="frames-grid">
@@ -44,7 +45,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
         disabled={!selectedFrame}
         onClick={() => selectedFrame && onStartSession(selectedFrame)}
       >
-        📷 Start Photo Session
+        <Camera size={20} /> Start Photo Session
       </button>
     </div>
   );

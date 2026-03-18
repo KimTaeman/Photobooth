@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { Sparkles, Download, Film, RotateCcw, QrCode } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
 
 interface ResultScreenProps {
@@ -190,7 +191,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     <div id="screen-result" className={`screen ${isActive ? 'active' : ''}`}>
       <div className="result-content">
         <div className="result-header">
-          <h1>🎉 Your Photobooth Memories!</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}><Sparkles size={32} /> Your Photobooth Memories!</h1>
           <p>Scan the QR code to access all your photos and videos</p>
         </div>
         
@@ -220,7 +221,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         )}
 
         <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'block' : 'none' }}>
-          <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px' }}>📸 Scan for All Memories</p>
+          <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
           <div className="qr-box">
             <canvas ref={qrRef} />
           </div>
@@ -228,11 +229,11 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         </div>
 
         <div className="result-actions">
-          <button className="btn btn-primary btn-lg" onClick={downloadLocalPhoto}>📷 Save Photo Strip</button>
+          <button className="btn btn-primary btn-lg" onClick={downloadLocalPhoto}><Download size={20} /> Save Photo Strip</button>
           {videoBlob && (
-            <button className="btn btn-blue btn-lg" onClick={downloadLocalVideo}>🎬 Save Video</button>
+            <button className="btn btn-blue btn-lg" onClick={downloadLocalVideo}><Film size={20} /> Save Video</button>
           )}
-          <button className="btn btn-outline btn-lg" onClick={onNewSession}>🔄 New Session</button>
+          <button className="btn btn-outline btn-lg" onClick={onNewSession}><RotateCcw size={20} /> New Session</button>
         </div>
       </div>
 
