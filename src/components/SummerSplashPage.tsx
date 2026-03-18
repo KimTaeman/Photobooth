@@ -175,7 +175,7 @@ const SummerSplashPage: React.FC = () => {
                     <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Film size={18} /> Action Video</div>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: 'black', aspectRatio: '16/9', position: 'relative', cursor: 'pointer' }} onClick={togglePlay}>
-                            <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }} onEnded={() => setIsPlaying(false)}>
+                            <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', transform: 'scaleX(1)' }} onEnded={() => setIsPlaying(false)}>
                                 <source src={videoMp4Url} type="video/mp4" />
                                 <source src={videoWebmUrl!} type="video/webm" />
                             </video>

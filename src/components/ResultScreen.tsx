@@ -271,7 +271,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
             {videoPreviewUrl && (
               <div className="result-video" style={{ position: 'relative', cursor: 'pointer', margin:'auto', marginTop: 0 }} onClick={togglePlay}>
-                <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(-1)' }} />
+                <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(1)' }} />
                 {!isPlaying && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
