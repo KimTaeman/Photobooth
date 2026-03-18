@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Film, Image, Camera, Share2, Heart } from 'lucide-react';
+import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
 
 const SummerSplashPage: React.FC = () => {
@@ -21,8 +21,7 @@ const SummerSplashPage: React.FC = () => {
 
     const getCloudinaryUrl = (suffix: string, isVideo = false, download = false) => {
         const type = isVideo ? 'video' : 'image';
-        const resource = 'upload'; 
-        // Descriptive name for the downloaded file
+        const resource = 'upload';
         const filename = isVideo ? 'SummerSplash_Video' : (suffix.includes('final') ? 'SummerSplash_PhotoStrip' : `SummerSplash_Shot`);
         const attachment = download ? `fl_attachment:${filename}/` : '';
         return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/${type}/${resource}/${attachment}${sessionId}_${suffix}`;
@@ -30,7 +29,8 @@ const SummerSplashPage: React.FC = () => {
 
     const finalUrl = getCloudinaryUrl('final.jpg');
     const finalDownloadUrl = getCloudinaryUrl('final.jpg', false, true);
-    const videoUrl = hasVideo ? getCloudinaryUrl('video.mp4', true) : null;
+    const videoMp4Url = hasVideo ? getCloudinaryUrl('video.mp4', true) : null;
+    const videoWebmUrl = hasVideo ? getCloudinaryUrl('video.webm', true) : null;
     const videoDownloadUrl = hasVideo ? getCloudinaryUrl('video.mp4', true, true) : null;
 
     const shots = [1, 2, 3, 4].map(num => ({
@@ -40,6 +40,7 @@ const SummerSplashPage: React.FC = () => {
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    const [finalImgError, setFinalImgError] = useState(false);
     const videoRef = React.useRef<HTMLVideoElement>(null);
 
     const handleShare = async () => {
@@ -65,8 +66,18 @@ const SummerSplashPage: React.FC = () => {
         }
     };
 
+    if (finalImgError) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', padding: '20px', flexDirection: 'column', gap: '16px' }}>
+                <AlertCircle size={48} color="#EF4444" />
+                <h2 style={{ color: '#1E3A5F', fontFamily: 'Fredoka, sans-serif' }}>Session Not Found</h2>
+                <p style={{ color: '#64748B', maxWidth: '300px' }}>This link may have expired or is invalid. Photos are only available for 24 hours after the session.</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="summer-splash-page" style={{ 
+        <div className="summer-splash-page" style={{
             background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)',
             minHeight: '100vh',
             height: '100vh',
@@ -95,8 +106,12 @@ const SummerSplashPage: React.FC = () => {
                 <p style={{ color: '#64748B', marginTop: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
                     Your Memories are Ready!
                 </p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', padding: '6px 14px', borderRadius: '50px', background: '#FEF9C3', color: '#92400E', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <Clock size={13} /> Save within 24 hours — files expire after that
+                </div>
+                <br />
                 <button onClick={handleShare} style={{
-                    marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '50px', border: '2px solid #BAE6FD',
                     background: 'rgba(186,230,253,0.2)', color: '#3B82F6',
                     fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.95rem',
@@ -112,7 +127,12 @@ const SummerSplashPage: React.FC = () => {
                 <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Image size={18} /> Final Photo Strip</div>
                     <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9' }}>
-                        <img src={finalUrl} alt="Final Strip" style={{ width: '100%', display: 'block' }} />
+                        <img
+                            src={finalUrl}
+                            alt="Final Strip"
+                            style={{ width: '100%', display: 'block' }}
+                            onError={() => setFinalImgError(true)}
+                        />
                     </div>
                     <a href={finalDownloadUrl} download="SummerSplash_PhotoStrip.jpg" className="btn btn-primary" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -125,11 +145,14 @@ const SummerSplashPage: React.FC = () => {
                 </div>
 
                 {/* Video */}
-                {videoUrl && (
+                {videoMp4Url && (
                     <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Film size={18} /> Action Video</div>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: 'black', aspectRatio: '16/9', position: 'relative', cursor: 'pointer' }} onClick={togglePlay}>
-                            <video ref={videoRef} src={videoUrl} playsInline style={{ width: '100%', height: '100%' }} onEnded={() => setIsPlaying(false)} />
+                            <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }} onEnded={() => setIsPlaying(false)}>
+                                <source src={videoMp4Url} type="video/mp4" />
+                                <source src={videoWebmUrl!} type="video/webm" />
+                            </video>
                             {!isPlaying && (
                                 <div style={{
                                     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -146,7 +169,7 @@ const SummerSplashPage: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        <a href={videoDownloadUrl || '#'} download="SummerSplash_Video.webm" className="btn btn-blue" style={{
+                        <a href={videoDownloadUrl || '#'} download="SummerSplash_Video.mp4" className="btn btn-blue" style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             padding: '16px 20px', borderRadius: '50px', border: 'none',
                             background: '#3B82F6', color: 'white', fontFamily: 'Fredoka, sans-serif', fontWeight: 600,
@@ -163,13 +186,19 @@ const SummerSplashPage: React.FC = () => {
                     <div className="shots-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {shots.map((shot, i) => (
                             <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', background: '#F1F5F9' }}>
-                                <img src={shot.url} alt={`Shot ${i+1}`} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }} />
-                                <a href={shot.downloadUrl} download={`shot_${i+1}_${sessionId}.jpg`} style={{
+                                <img
+                                    src={shot.url}
+                                    alt={`Shot ${i + 1}`}
+                                    style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }}
+                                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                                />
+                                <a href={shot.downloadUrl} download={`shot_${i + 1}_${sessionId}.jpg`} style={{
                                     position: 'absolute', bottom: '8px', right: '8px', padding: '6px 10px',
                                     fontSize: '0.7rem', borderRadius: '8px', background: '#F1F5F9',
-                                    color: '#3B82F6', textDecoration: 'none', fontWeight: 700, fontFamily: 'Fredoka, sans-serif'
+                                    color: '#3B82F6', textDecoration: 'none', fontWeight: 700, fontFamily: 'Fredoka, sans-serif',
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px'
                                 }}>
-                                    <Download size={12} style={{ display: 'inline' }} /> Save
+                                    <Download size={12} /> Save
                                 </a>
                             </div>
                         ))}

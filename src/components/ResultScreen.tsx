@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Sparkles, Download, Film, RotateCcw, QrCode } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
+import { logSession } from '../hooks/useSupabase';
 
 interface ResultScreenProps {
   isActive: boolean;
@@ -149,7 +150,10 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         hasVideo = true;
       }
 
-      // 5. Generate QR Code for the Summer Splash Page
+      // 5. Log session to Supabase
+      await logSession(sessionId, selectedFrame, hasVideo);
+
+      // 6. Generate QR Code for the Summer Splash Page
       setUploadStatus('Generating sharing link...');
       
       const baseUrl = window.location.origin;
@@ -201,7 +205,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
         {videoPreviewUrl && (
           <div className="result-video" style={{ position: 'relative', cursor: 'pointer' }} onClick={togglePlay}>
-            <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} />
+            <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(-1)' }} />
             {!isPlaying && (
               <div style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -225,7 +229,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           <div className="qr-box">
             <canvas ref={qrRef} />
           </div>
-          <p className="expiry-note">Download individual shots, video & final strip!</p>
+          <p className="expiry-note">Save within 24 hours — files expire after that!</p>
         </div>
 
         <div className="result-actions">
