@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { LockOpen } from 'lucide-react';
+import { LockOpen, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PASSWORD_HASH, sha256 } from '../hooks/useSupabase';
 
 interface LockScreenProps {
@@ -30,6 +31,23 @@ const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isActive }) => {
 
   return (
     <div id="screen-lock" className={`screen ${isActive ? 'active' : ''}`}>
+      <Link 
+        to="/admin" 
+        style={{ 
+          position: 'absolute', 
+          top: '30px', 
+          right: '30px', 
+          color: '#3B82F6', 
+          opacity: 0.6,
+          transition: 'opacity 0.2s',
+          padding: '10px',
+          zIndex: 100
+        }}
+        className="admin-gear"
+        title="Admin Dashboard"
+      >
+        <Settings size={28} />
+      </Link>
       <div className="lock-card glass-card">
         <svg className="lock-splash-icon" viewBox="0 0 100 100" fill="none">
           <circle cx="50" cy="50" r="24" fill="#BAE6FD" />

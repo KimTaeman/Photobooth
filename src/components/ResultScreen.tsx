@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Sparkles, Download, Film, RotateCcw, QrCode, Printer } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
-import { logSession } from '../hooks/useSupabase';
+import { logSession, getSetting } from '../hooks/useSupabase';
 
 interface ResultScreenProps {
   isActive: boolean;
@@ -59,7 +59,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][]): Promise<Blob> => {
+  const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][], filter = 'none'): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
     // Strip layout: 2752x1536 scaled down to ~860x480 for GIF
     const w = 860, h = 480;
@@ -85,8 +85,12 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         ctx.fillRect(0, 0, w, h);
         for (let si = 0; si < 4; si++) {
           const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
-          if (img) drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
+          if (img) {
+            ctx.filter = filter;
+            drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
+          }
         }
+        ctx.filter = 'none';
         ctx.drawImage(frameImg, 0, 0, w, h);
         frames.push(c.toDataURL('image/jpeg', 0.82));
       }
@@ -102,7 +106,11 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         const ctx = c.getContext('2d')!;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
-        for (let j = 0; j <= i; j++) drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
+        for (let j = 0; j <= i; j++) {
+          ctx.filter = filter;
+          drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
+        }
+        ctx.filter = 'none';
         ctx.drawImage(frameImg, 0, 0, w, h);
         frames.push(c.toDataURL('image/jpeg', 0.85));
       }
@@ -126,6 +134,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
       if (videoBlob) setVideoPreviewUrl(URL.createObjectURL(videoBlob));
 
+      // 0. Fetch global filter
+      const activeFilter = await getSetting('active_filter', 'none');
+
       // 1. Create Final Photo Strip
       const canvas = document.createElement('canvas');
       canvas.width = 2752; canvas.height = 1536;
@@ -140,8 +151,13 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       ];
 
       const photoImgs = await Promise.all(photos.map(loadImage));
-      photoImgs.forEach((img, i) => drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH));
+      photoImgs.forEach((img, i) => {
+        ctx.filter = activeFilter;
+        drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH);
+      });
 
+      // Draw frame without filter
+      ctx.filter = 'none';
       const frameImg = await loadImage(selectedFrame!);
       ctx.drawImage(frameImg, 0, 0, 2752, 1536);
 
@@ -175,7 +191,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 5. Generate & upload GIF clip
       setUploadStatus('Generating GIF clip...');
-      const gifBlob = await generateGif(photos, selectedFrame!, photosBursts);
+      const gifBlob = await generateGif(photos, selectedFrame!, photosBursts, activeFilter);
       await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
 
       // 6. Log session
@@ -237,57 +253,61 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           <p>Scan the QR code to access all your photos and videos</p>
         </div>
 
-        <div className="print-area">
-          <div className="print-only print-header">
-            <p className="print-title">Summer Splash 2026</p>
-            <p className="print-subtitle">Photobooth Memories</p>
-          </div>
-          <div className="result-photo">
-            {resultImg && <img src={resultImg} alt="Your photo strip" />}
-          </div>
-          <div className="print-only print-footer">
-            <p>Scan the QR code on your invite to download all your memories</p>
-            <p>Save within 24 hours &middot; Summer Splash Photobooth 2026</p>
-          </div>
-        </div>
+        <div className="result-main">
+          <div className="result-left" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="print-area">
+              <div className="print-only print-header">
+                <p className="print-title">Summer Splash 2026</p>
+                <p className="print-subtitle">Photobooth Memories</p>
+              </div>
+              <div className="result-photo">
+                {resultImg && <img src={resultImg} alt="Your photo strip" />}
+              </div>
+              <div className="print-only print-footer">
+                <p>Scan the QR code on your invite to download all your memories</p>
+                <p>Save within 24 hours &middot; Summer Splash Photobooth 2026</p>
+              </div>
+            </div>
 
-        {videoPreviewUrl && (
-          <div className="result-video" style={{ position: 'relative', cursor: 'pointer' }} onClick={togglePlay}>
-            <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(-1)' }} />
-            {!isPlaying && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="#3B82F6"><path d="M8 5v14l11-7z" /></svg>
-                </div>
+            {videoPreviewUrl && (
+              <div className="result-video" style={{ position: 'relative', cursor: 'pointer', marginTop: 0 }} onClick={togglePlay}>
+                <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(-1)' }} />
+                {!isPlaying && (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="#3B82F6"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
 
-        <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', margin: 'auto', gridRowStart: 2, gridRowEnd: 4}}>
-          <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
-          <div className="qr-box"><canvas ref={qrRef} /></div>
-          {downloadPageUrl && (
-            <a 
-              href={downloadPageUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              style={{ 
-                marginTop: '12px', 
-                color: '#3B82F6', 
-                fontSize: '0.9rem', 
-                wordBreak: 'break-all', 
-                textAlign: 'center', 
-                textDecoration: 'none', 
-                fontWeight: 600,
-                maxWidth: '100%',
-                padding: '0 10px'
-              }}
-            >
-              {downloadPageUrl}
-            </a>
-          )}
-          <p className="expiry-note">Save within 24 hours — files expire after that!</p>
+          <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center' }}>
+            <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
+            <div className="qr-box"><canvas ref={qrRef} /></div>
+            {downloadPageUrl && (
+              <a 
+                href={downloadPageUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ 
+                  marginTop: '12px', 
+                  color: '#3B82F6', 
+                  fontSize: '0.9rem', 
+                  wordBreak: 'break-all', 
+                  textAlign: 'center', 
+                  textDecoration: 'none', 
+                  fontWeight: 600,
+                  maxWidth: '100%',
+                  padding: '0 10px'
+                }}
+              >
+                {downloadPageUrl}
+              </a>
+            )}
+            <p className="expiry-note">Save within 24 hours — files expire after that!</p>
+          </div>
         </div>
 
         <div className="result-actions">

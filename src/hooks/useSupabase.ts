@@ -19,13 +19,28 @@ export async function sha256(text: string) {
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Requires a `sessions` table:
-// CREATE TABLE sessions (
-//   id text PRIMARY KEY,
-//   created_at timestamptz DEFAULT now(),
-//   frame text,
-//   has_video boolean
+// Requires a `settings` table:
+// CREATE TABLE settings (
+//   key text PRIMARY KEY,
+//   value text
 // );
+export async function getSetting(key: string, defaultValue: string): Promise<string> {
+    try {
+        const { data } = await supabase.from('settings').select('value').eq('key', key).single();
+        return data?.value ?? defaultValue;
+    } catch {
+        return defaultValue;
+    }
+}
+
+export async function updateSetting(key: string, value: string) {
+    try {
+        await supabase.from('settings').upsert({ key, value });
+    } catch (err) {
+        console.error('Failed to update setting:', err);
+    }
+}
+
 export async function logSession(sessionId: string, frame: string | null, hasVideo: boolean) {
     try {
         await supabase.from('sessions').insert({ id: sessionId, frame, has_video: hasVideo });
@@ -33,3 +48,4 @@ export async function logSession(sessionId: string, frame: string | null, hasVid
         // non-critical — don't break the app if logging fails
     }
 }
+

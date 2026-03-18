@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, PASSWORD_HASH, sha256 } from '../hooks/useSupabase';
+import { Link } from 'react-router-dom';
+import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut } from 'lucide-react';
+import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate } from 'lucide-react';
+import heroImg from '../assets/hero.png';
 
 interface Session {
   id: string;
@@ -10,12 +12,30 @@ interface Session {
   has_video: boolean;
 }
 
-const AdminPage: React.FC = () => {
-  const [authed, setAuthed] = useState(false);
+const AVAILABLE_FILTERS = [
+  { id: 'none', label: 'None (Natural)', preview: 'none' },
+  { id: 'grayscale(100%)', label: 'B&W Classic', preview: 'grayscale(100%)' },
+  { id: 'sepia(100%)', label: 'Vintage Sepia', preview: 'sepia(100%)' },
+  { id: 'contrast(120%) brightness(110%)', label: 'Vivid Pop', preview: 'contrast(120%) brightness(110%)' },
+  { id: 'saturate(150%)', label: 'High Saturation', preview: 'saturate(150%)' },
+  { id: 'contrast(150%) brightness(80%) grayscale(100%)', label: 'Noir', preview: 'contrast(150%) brightness(80%) grayscale(100%)' },
+  { id: 'hue-rotate(180deg)', label: 'Psychedelic', preview: 'hue-rotate(180deg)' },
+  { id: 'blur(2px)', label: 'Soft Focus', preview: 'blur(2px)' },
+];
+
+interface AdminPageProps {
+  authed: boolean;
+  setAuthed: (val: boolean) => void;
+}
+
+const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('none');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleLogin = async () => {
     const hash = await sha256(password);
@@ -30,11 +50,35 @@ const AdminPage: React.FC = () => {
 
   useEffect(() => {
     if (!authed) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    supabase.from('sessions').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { setSessions((data as Session[]) || []); setLoading(false); });
-  }, [authed]);
+    
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load sessions and settings in parallel
+        const [sessionsRes, filterSetting] = await Promise.all([
+          supabase.from('sessions').select('*').order('created_at', { ascending: false }),
+          getSetting('active_filter', 'none')
+        ]);
+        
+        setSessions((sessionsRes.data as Session[]) || []);
+        setActiveFilter(filterSetting);
+      } catch (err) {
+        console.error('Failed to load admin data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [authed, setAuthed]);
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    await updateSetting('active_filter', activeFilter);
+    setIsSaving(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
 
   const getThumbnail = (id: string) =>
     `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,h_267,c_fill/${id}_final.jpg`;
@@ -56,6 +100,18 @@ const AdminPage: React.FC = () => {
           <button onClick={handleLogin} style={{ width: '100%', padding: '14px', borderRadius: '50px', border: 'none', background: 'linear-gradient(135deg, #FEF08A, #FACC15)', color: '#92400E', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px' }}>
             <LockOpen size={18} /> Unlock
           </button>
+          
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px dashed #E2E8F0' }}>
+            <Link 
+              to="/" 
+              style={{ 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                color: '#64748B', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600
+              }}
+            >
+              <LayoutTemplate size={16} /> Go to Photobooth
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -79,15 +135,36 @@ const AdminPage: React.FC = () => {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)', fontFamily: 'Nunito, sans-serif', padding: '0 0 60px' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)', fontFamily: 'Nunito, sans-serif', padding: '0 0 60px' }}>
       <header style={{ background: 'white', padding: '24px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 12px rgba(59,130,246,0.06)', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontFamily: 'Fredoka, sans-serif', color: '#3B82F6', margin: 0, fontSize: '1.8rem' }}>Admin Dashboard</h1>
           <p style={{ color: '#64748B', margin: '4px 0 0', fontSize: '0.85rem', fontWeight: 600 }}>Summer Splash Photobooth 2026</p>
         </div>
-        <button onClick={() => setAuthed(false)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '50px', border: '2px solid #BAE6FD', background: 'transparent', color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
-          <LogOut size={16} /> Logout
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link 
+            to="/" 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', 
+              borderRadius: '50px', border: 'none', background: 'linear-gradient(135deg, #3B82F6, #2563EB)', 
+              color: 'white', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, 
+              cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'none' 
+            }}
+          >
+            <LayoutTemplate size={16} /> Go to Photobooth
+          </Link>
+          <button 
+            onClick={() => setAuthed(false)} 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', 
+              borderRadius: '50px', border: '2px solid #BAE6FD', background: 'transparent', 
+              color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, 
+              cursor: 'pointer', fontSize: '0.9rem' 
+            }}
+          >
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
       </header>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -102,6 +179,60 @@ const AdminPage: React.FC = () => {
               {statCard(<Film size={22} />, 'With Video', withVideo)}
               {statCard(<Camera size={22} />, 'Frame 1', frame1Count)}
               {statCard(<Camera size={22} />, 'Frame 2', frame2Count)}
+            </div>
+
+            {/* Application Settings */}
+            <div style={{ background: 'white', borderRadius: '20px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Settings size={20} color="#3B82F6" /> Photobooth Settings
+                </h2>
+                <button 
+                  onClick={handleSaveSettings}
+                  disabled={isSaving}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', 
+                    borderRadius: '50px', border: 'none', 
+                    background: saveSuccess ? '#22c55e' : 'linear-gradient(135deg, #3B82F6, #2563EB)', 
+                    color: 'white', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, 
+                    cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s'
+                  }}
+                >
+                  {saveSuccess ? <CheckCircle size={18} /> : <Save size={18} />}
+                  {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
+                    <Filter size={18} color="#3B82F6" /> Global Photo Filter
+                  </label>
+                  <p style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '16px' }}>
+                    Select a filter to be applied to all final photo strips and GIF clips.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                    {AVAILABLE_FILTERS.map(f => (
+                      <div 
+                        key={f.id} 
+                        onClick={() => setActiveFilter(f.id)}
+                        style={{ 
+                          padding: '12px', borderRadius: '16px', border: `2px solid ${activeFilter === f.id ? '#3B82F6' : '#F1F5F9'}`,
+                          background: activeFilter === f.id ? '#F0F9FF' : 'white', cursor: 'pointer',
+                          transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'
+                        }}
+                      >
+                        <div style={{ 
+                          width: '100%', aspectRatio: '4/3', borderRadius: '8px', 
+                          backgroundImage: `url(${heroImg})`, backgroundPosition: 'center', backgroundSize: 'cover',
+                          filter: f.preview, border: '1px solid #E2E8F0'
+                        }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeFilter === f.id ? '#1E3A5F' : '#64748B' }}>{f.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Hourly chart */}

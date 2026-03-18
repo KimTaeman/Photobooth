@@ -305,35 +305,41 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     display: flex; /* Show only when active */
 }
 .result-content {
-    display: grid;
-    grid-template-columns: minmax(340px, 1fr) 320px;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 32px;
     max-width: 1000px;
     width: 100%;
-    margin: auto 0; /* Center vertically when space allows */
-    min-height: min-content; /* Ensure it takes up enough space for scrolling */
+    margin: 40px auto;
 }
-.result-header { text-align: center; grid-column: 1 / -1; margin-bottom: 30px; }
+.result-main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 32px;
+    width: 100%;
+    align-items: start;
+}
+.result-header { text-align: center; margin-bottom: 10px; }
 .result-header h1 { font-size: 2.5rem; color: var(--blue); }
 .result-header p { color: var(--text-muted); margin-top: 8px; font-size: 1.1rem; }
+
 .result-photo {
     width: 100%; border-radius: 20px;
     overflow: hidden; border: 12px solid var(--white);
     box-shadow: 0 16px 48px rgba(0,0,0,0.1);
     background: linear-gradient(135deg, #E0F2FE, #FEF9C3);
-    grid-column: 1;
 }
 .result-photo img { width: 100%; display: block; }
+
 .result-actions {
-    display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
-    grid-column: 1 / -1;
-    margin-top: 40px;
-    margin-bottom: 40px;
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    width: 100%;
+    margin-top: 20px;
+    padding-bottom: 60px;
 }
 .qr-section {
     border-radius: 28px; padding: 32px; text-align: center; width: 100%;
-    grid-column: 2;
     align-self: start;
 }
 .qr-section p { color: var(--text-muted); font-size: 0.9rem; margin-top: 12px; }
@@ -360,11 +366,10 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .result-video video { width: 100%; display: block; }
 
 @media (max-width: 900px) {
-    .result-content {
+    .result-main {
         display: flex;
         flex-direction: column;
         align-items: center;
-        max-width: 760px;
     }
     .result-photo,
     .result-video,

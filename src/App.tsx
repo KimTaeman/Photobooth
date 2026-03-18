@@ -10,8 +10,8 @@ import SummerSplashPage from './components/SummerSplashPage';
 import AdminPage from './components/AdminPage';
 import type { Screen } from './types';
 
-function PhotoboothApp() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('lock');
+function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean }) {
+  const [currentScreen, setCurrentScreen] = useState<Screen>(isAdminAuthenticated ? 'frames' : 'lock');
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
   const [sessionPhotos, setSessionPhotos] = useState<string[]>([]);
   const [sessionBursts, setSessionBursts] = useState<string[][]>([]);
@@ -86,12 +86,14 @@ function PhotoboothApp() {
 }
 
 function App() {
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PhotoboothApp />} />
+        <Route path="/" element={<PhotoboothApp isAdminAuthenticated={isAdminAuthenticated} />} />
         <Route path="/summer-splash" element={<SummerSplashPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin" element={<AdminPage authed={isAdminAuthenticated} setAuthed={setIsAdminAuthenticated} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
