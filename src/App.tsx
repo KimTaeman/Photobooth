@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Stickers from './components/Stickers';
 import LockScreen from './components/LockScreen';
@@ -87,14 +87,14 @@ function PhotoboothApp() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<PhotoboothApp />} />
         <Route path="/summer-splash" element={<SummerSplashPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
