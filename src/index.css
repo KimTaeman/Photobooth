@@ -420,13 +420,61 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .preview-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* ---- Print ---- */
+.print-only { display: none; }
+
 @media print {
+    @page { size: A4 portrait; margin: 0; }
+
     body * { visibility: hidden !important; }
     .print-area, .print-area * { visibility: visible !important; }
+
     .print-area {
         position: fixed; inset: 0;
-        display: flex; align-items: center; justify-content: center;
         background: white;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 20px; padding: 36px 48px;
     }
-    .print-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    .print-only { display: flex !important; flex-direction: column; align-items: center; width: 100%; }
+
+    .print-header {
+        text-align: center;
+        padding-bottom: 18px;
+        border-bottom: 3px solid #BAE6FD;
+        gap: 4px;
+    }
+    .print-title {
+        font-family: 'Fredoka', sans-serif;
+        font-size: 2.4rem; font-weight: 700;
+        color: #3B82F6; margin: 0;
+        letter-spacing: 0.5px;
+    }
+    .print-subtitle {
+        font-family: 'Nunito', sans-serif;
+        font-size: 1rem; font-weight: 700;
+        color: #64748B; margin: 0;
+        letter-spacing: 2px; text-transform: uppercase;
+    }
+
+    .print-area .result-photo {
+        grid-column: unset !important;
+        border: 10px solid white !important;
+        box-shadow: 0 6px 28px rgba(0,0,0,0.14) !important;
+        border-radius: 16px !important;
+        max-width: 80%;
+    }
+    .print-area .result-photo img {
+        max-height: 52vh; width: auto !important; object-fit: contain;
+    }
+
+    .print-footer {
+        text-align: center;
+        padding-top: 16px;
+        border-top: 2px dashed #BAE6FD;
+        gap: 5px;
+    }
+    .print-footer p { font-family: 'Nunito', sans-serif; margin: 0; }
+    .print-footer p:first-child { font-size: 0.85rem; color: #475569; font-weight: 700; }
+    .print-footer p:last-child  { font-size: 0.72rem; color: #94A3B8; font-weight: 600; }
 }
