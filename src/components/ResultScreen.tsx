@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import GIFEncoder from 'gif-encoder-2';
 import { Sparkles, Download, Film, RotateCcw, QrCode, Printer } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
 import { logSession } from '../hooks/useSupabase';
@@ -59,6 +58,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   };
 
   const generateGif = async (photoImgs: HTMLImageElement[]): Promise<Blob> => {
+    const { default: GIFEncoder } = await import('gif-encoder-2');
     const w = 480, h = 320;
     const encoder = new GIFEncoder(w, h);
     encoder.setDelay(600);
