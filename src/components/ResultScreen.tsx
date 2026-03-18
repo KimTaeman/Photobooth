@@ -57,11 +57,36 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const generateGif = async (photoUrls: string[]): Promise<Blob> => {
+  const generateGif = async (photoUrls: string[], frameUrl: string): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
+    // Scale strip 1800×1200 → 720×480 (0.4×)
+    const w = 720, h = 480;
+    const slotW = 334, slotH = 214;
+    const coords = [
+      { x: 18, y: 18 }, { x: 368, y: 18 },
+      { x: 18, y: 248 }, { x: 368, y: 248 },
+    ];
+    const photoImgs = await Promise.all(photoUrls.map(loadImage));
+    const frameImg = await loadImage(frameUrl);
+
+    // Progressive reveal: each frame adds one more photo in the strip layout
+    const frames: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      for (let j = 0; j <= i; j++) drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
+      ctx.drawImage(frameImg, 0, 0, w, h);
+      frames.push(c.toDataURL('image/jpeg', 0.85));
+    }
+    // Hold on the final complete frame a bit longer
+    frames.push(frames[3], frames[3]);
+
     return new Promise((resolve, reject) => {
       createGIF(
-        { images: photoUrls, gifWidth: 480, gifHeight: 320, interval: 0.6 },
+        { images: frames, gifWidth: w, gifHeight: h, interval: 0.5 },
         (obj) => {
           if (obj.error) { reject(new Error(obj.errorMsg || 'GIF generation failed')); return; }
           fetch(obj.image).then(r => r.blob()).then(resolve).catch(reject);
@@ -125,7 +150,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 5. Generate & upload GIF clip
       setUploadStatus('Generating GIF clip...');
-      const gifBlob = await generateGif(photos);
+      const gifBlob = await generateGif(photos, selectedFrame!);
       await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
 
       // 6. Log session
@@ -187,8 +212,18 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           <p>Scan the QR code to access all your photos and videos</p>
         </div>
 
-        <div className="print-area result-photo">
-          {resultImg && <img src={resultImg} alt="Your photo strip" />}
+        <div className="print-area">
+          <div className="print-only print-header">
+            <p className="print-title">Summer Splash 2026</p>
+            <p className="print-subtitle">Photobooth Memories</p>
+          </div>
+          <div className="result-photo">
+            {resultImg && <img src={resultImg} alt="Your photo strip" />}
+          </div>
+          <div className="print-only print-footer">
+            <p>Scan the QR code on your invite to download all your memories</p>
+            <p>Save within 24 hours &middot; Summer Splash Photobooth 2026</p>
+          </div>
         </div>
 
         {videoPreviewUrl && (
@@ -204,8 +239,8 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           </div>
         )}
 
-        <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'block' : 'none' }}>
-          <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
+        <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center' }}>
+          <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
           <div className="qr-box"><canvas ref={qrRef} /></div>
           <p className="expiry-note">Save within 24 hours — files expire after that!</p>
         </div>
