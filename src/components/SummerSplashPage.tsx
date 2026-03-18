@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle } from 'lucide-react';
+import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
 
 const SummerSplashPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const sessionId = searchParams.get('id');
     const hasVideo = searchParams.get('v') === '1';
+    const hasGif = searchParams.get('g') === '1';
+
+    // All hooks must be declared before any early return
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [shareCopied, setShareCopied] = useState(false);
+    const [finalImgError, setFinalImgError] = useState(false);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
 
     if (!sessionId) {
         return (
@@ -29,6 +36,8 @@ const SummerSplashPage: React.FC = () => {
 
     const finalUrl = getCloudinaryUrl('final.jpg');
     const finalDownloadUrl = getCloudinaryUrl('final.jpg', false, true);
+    const gifUrl = hasGif ? getCloudinaryUrl('clip.gif') : null;
+    const gifDownloadUrl = hasGif ? getCloudinaryUrl('clip.gif', false, true) : null;
     const videoMp4Url = hasVideo ? getCloudinaryUrl('video.mp4', true) : null;
     const videoWebmUrl = hasVideo ? getCloudinaryUrl('video.webm', true) : null;
     const videoDownloadUrl = hasVideo ? getCloudinaryUrl('video.mp4', true, true) : null;
@@ -37,11 +46,6 @@ const SummerSplashPage: React.FC = () => {
         url: getCloudinaryUrl(`shot_${num}.jpg`),
         downloadUrl: getCloudinaryUrl(`shot_${num}.jpg`, false, true)
     }));
-
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [shareCopied, setShareCopied] = useState(false);
-    const [finalImgError, setFinalImgError] = useState(false);
-    const videoRef = React.useRef<HTMLVideoElement>(null);
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -143,6 +147,25 @@ const SummerSplashPage: React.FC = () => {
                         <Download size={16} /> Save Photo Strip
                     </a>
                 </div>
+
+                {/* GIF Clip */}
+                {gifUrl && (
+                    <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Clapperboard size={18} /> GIF Clip</div>
+                        <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9' }}>
+                            <img src={gifUrl} alt="GIF Clip" style={{ width: '100%', display: 'block' }} />
+                        </div>
+                        <a href={gifDownloadUrl!} download="SummerSplash_Clip.gif" style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            padding: '16px 20px', borderRadius: '50px', border: 'none',
+                            background: 'linear-gradient(135deg, #A78BFA, #7C3AED)', color: 'white',
+                            fontFamily: 'Fredoka, sans-serif', fontWeight: 600,
+                            textDecoration: 'none', fontSize: '1rem', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)'
+                        }}>
+                            <Download size={16} /> Save GIF
+                        </a>
+                    </div>
+                )}
 
                 {/* Video */}
                 {videoMp4Url && (

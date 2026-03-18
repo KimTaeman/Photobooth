@@ -1,0 +1,13 @@
+{
+  "name": "Summer Splash Photobooth 2026",
+  "short_name": "Photobooth",
+  "description": "Summer Splash 2026 Photo Booth",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#3B82F6",
+  "background_color": "#FEF9C3",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
