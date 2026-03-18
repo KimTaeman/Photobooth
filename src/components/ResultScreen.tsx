@@ -61,12 +61,12 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
   const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][]): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
-    // Strip layout: 1800×1200 → 720×480 (0.4×)
-    const w = 720, h = 480;
-    const slotW = 334, slotH = 214;
+    // Strip layout: 2752x1536 scaled down to ~860x480 for GIF
+    const w = 860, h = 480;
+    const slotW = 399, slotH = 214;
     const coords = [
-      { x: 18, y: 18 }, { x: 368, y: 18 },
-      { x: 18, y: 248 }, { x: 368, y: 248 },
+      { x: 21, y: 18 }, { x: 439, y: 18 },
+      { x: 21, y: 248 }, { x: 439, y: 248 },
     ];
     const frameImg = await loadImage(frameUrl);
 
@@ -128,22 +128,22 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 1. Create Final Photo Strip
       const canvas = document.createElement('canvas');
-      canvas.width = 1800; canvas.height = 1200;
+      canvas.width = 2752; canvas.height = 1536;
       const ctx = canvas.getContext('2d')!;
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 1800, 1200);
+      ctx.fillRect(0, 0, 2752, 1536);
 
-      const slotW = 835, slotH = 535;
+      const slotW = 1277, slotH = 685;
       const coords = [
-        { x: 45, y: 45 }, { x: 920, y: 45 },
-        { x: 45, y: 620 }, { x: 920, y: 620 }
+        { x: 69, y: 58 }, { x: 1407, y: 58 },
+        { x: 69, y: 794 }, { x: 1407, y: 794 }
       ];
 
       const photoImgs = await Promise.all(photos.map(loadImage));
       photoImgs.forEach((img, i) => drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH));
 
       const frameImg = await loadImage(selectedFrame!);
-      ctx.drawImage(frameImg, 0, 0, 1800, 1200);
+      ctx.drawImage(frameImg, 0, 0, 2752, 1536);
 
       const finalPhotoBlob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92)
@@ -264,9 +264,29 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           </div>
         )}
 
-        <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center' }}>
+        <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', margin: 'auto', gridRowStart: 2, gridRowEnd: 4}}>
           <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
           <div className="qr-box"><canvas ref={qrRef} /></div>
+          {downloadPageUrl && (
+            <a 
+              href={downloadPageUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ 
+                marginTop: '12px', 
+                color: '#3B82F6', 
+                fontSize: '0.9rem', 
+                wordBreak: 'break-all', 
+                textAlign: 'center', 
+                textDecoration: 'none', 
+                fontWeight: 600,
+                maxWidth: '100%',
+                padding: '0 10px'
+              }}
+            >
+              {downloadPageUrl}
+            </a>
+          )}
           <p className="expiry-note">Save within 24 hours — files expire after that!</p>
         </div>
 

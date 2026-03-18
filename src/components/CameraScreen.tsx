@@ -126,7 +126,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
     return new Promise(resolve => {
       const v = videoRef.current!;
       const canvas = document.createElement('canvas');
-      canvas.width = 1260; canvas.height = 810;
+      canvas.width = 1277; canvas.height = 685;
       const ctx = canvas.getContext('2d')!;
       ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
       drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
@@ -141,7 +141,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       const url = await new Promise<string>(resolve => {
         const v = videoRef.current!;
         const canvas = document.createElement('canvas');
-        canvas.width = 1260; canvas.height = 810;
+        canvas.width = 1277; canvas.height = 685;
         const ctx = canvas.getContext('2d')!;
         ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
         drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);

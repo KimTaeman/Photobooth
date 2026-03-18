@@ -229,7 +229,7 @@ h1, h2, h3, .shot-label, .frame-label {
 }
 #video-wrapper {
     position: relative; width: 88%; max-width: 860px;
-    aspect-ratio: 3/2; border-radius: 24px; overflow: hidden;
+    aspect-ratio: 1277 / 685; border-radius: 24px; overflow: hidden;
     border: 12px solid var(--white);
     box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
     background: #E0F2FE;
@@ -460,12 +460,19 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     .print-area .result-photo {
         grid-column: unset !important;
         border: 10px solid white !important;
-        box-shadow: 0 6px 28px rgba(0,0,0,0.14) !important;
-        border-radius: 16px !important;
-        max-width: 80%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        border-radius: 12px !important;
+        max-width: 95%;
+        width: 100%;
+        overflow: visible;
+        background: white;
     }
     .print-area .result-photo img {
-        max-height: 52vh; width: auto !important; object-fit: contain;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 70vh;
+        object-fit: contain;
+        display: block;
     }
 
     .print-footer {
