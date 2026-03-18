@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Your Photobooth Memories</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky: #BAE6FD;
+            --white: #FFFFFF;
+            --yellow: #FEF08A;
+            --yellow-deep: #FACC15;
+            --blue: #3B82F6;
+            --blue-light: #60A5FA;
+            --text: #1E3A5F;
+            --text-muted: #64748B;
+            --radius: 20px;
+            --bg-gradient: linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 40px 20px 20px;
+            text-align: center;
+            background: white;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.05);
+            margin-bottom: 20px;
+        }
+
+        h1 { 
+            font-family: 'Fredoka', sans-serif; 
+            color: var(--blue); 
+            margin: 0; 
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .content {
+            width: 100%;
+            max-width: 500px;
+            padding: 0 20px 40px;
+            display: flex; flex-direction: column; gap: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+            display: flex; flex-direction: column; gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .main-photo-container {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #F1F5F9;
+            position: relative;
+        }
+
+        .main-photo-container img {
+            width: 100%;
+            display: block;
+        }
+
+        .video-container {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: black;
+            aspect-ratio: 16/9;
+        }
+
+        video { width: 100%; height: 100%; }
+
+        .shots-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .shot-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #F1F5F9;
+        }
+
+        .shot-item img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            display: block;
+        }
+
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 20px; border-radius: 50px; border: none;
+            font-family: 'Fredoka', sans-serif; font-weight: 600; cursor: pointer;
+            text-decoration: none; font-size: 0.95rem;
+            transition: transform 0.2s, filter 0.2s;
+        }
+
+        .btn:active { transform: scale(0.96); filter: brightness(0.9); }
+
+        .btn-primary { background: var(--yellow-deep); color: #92400E; }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-outline { background: #F1F5F9; color: var(--blue); }
+
+        .footer {
+            margin-top: auto;
+            padding: 30px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* Float Animation for stickers */
+        .floating { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Summer Splash 2026</h1>
+        <p class="subtitle">Your Photobooth Session is Ready!</p>
+    </header>
+
+    <div class="content">
+        <!-- Final Strip -->
+        <div class="card">
+            <div class="section-title">✨ Final Photo Strip</div>
+            <div class="main-photo-container">
+                <img src="{{FINAL_PHOTO_URL}}" alt="Final Photo">
+            </div>
+            <a href="{{FINAL_PHOTO_DOWNLOAD_URL}}" download="photobooth_strip.jpg" class="btn btn-primary">
+                📥 Download Strip
+            </a>
+        </div>
+
+        <!-- Video -->
+        <div class="card" style="{{VIDEO_DISPLAY_STYLE}}">
+            <div class="section-title">🎬 Action Video</div>
+            <div class="video-container">
+                <video src="{{VIDEO_URL}}" controls playsinline></video>
+            </div>
+            <a href="{{VIDEO_DOWNLOAD_URL}}" download="photobooth_video.webm" class="btn btn-blue">
+                📥 Download Video
+            </a>
+        </div>
+
+        <!-- Individual Shots -->
+        <div class="card">
+            <div class="section-title">📸 Individual Shots</div>
+            <div class="shots-grid">
+                {{INDIVIDUAL_SHOTS_HTML}}
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Made with ❤️ Photobooth 2026
+    </div>
+
+    <script>
+        // Check if video exists, if not hide the section
+        if ("{{VIDEO_URL}}".includes("VIDEO_URL")) {
+            // This is just a safety if replacement fails
+        }
+    </script>
+</body>
+</html>
