@@ -255,7 +255,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
         <div className="result-main">
           <div className="result-left" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="print-area">
+            <div className="print-area" style={{margin: 'auto'}}>
               <div className="print-only print-header">
                 <p className="print-title">Summer Splash 2026</p>
                 <p className="print-subtitle">Photobooth Memories</p>
@@ -270,7 +270,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             </div>
 
             {videoPreviewUrl && (
-              <div className="result-video" style={{ position: 'relative', cursor: 'pointer', marginTop: 0 }} onClick={togglePlay}>
+              <div className="result-video" style={{ position: 'relative', cursor: 'pointer', margin:'auto', marginTop: 0 }} onClick={togglePlay}>
                 <video ref={videoRef} src={videoPreviewUrl} playsInline onEnded={() => setIsPlaying(false)} style={{ transform: 'scaleX(-1)' }} />
                 {!isPlaying && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
@@ -283,7 +283,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             )}
           </div>
 
-          <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center' }}>
+          <div className="qr-section glass-card" style={{ display: downloadPageUrl ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center' , margin: 'auto'}}>
             <p style={{ fontWeight: 700, color: '#1E3A5F', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><QrCode size={18} /> Scan for All Memories</p>
             <div className="qr-box"><canvas ref={qrRef} /></div>
             {downloadPageUrl && (
