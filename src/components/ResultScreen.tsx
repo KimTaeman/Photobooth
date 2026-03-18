@@ -183,7 +183,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 7. Generate QR code
       setUploadStatus('Generating sharing link...');
-      const shareUrl = `${window.location.origin}/summer-splash?id=${sessionId}${hasVideo ? '&v=1' : ''}&g=1`;
+      const shareUrl = `https://photobooth-teal-pi.vercel.app/summer-splash?id=${sessionId}${hasVideo ? '&v=1' : ''}&g=1`;
       setDownloadPageUrl(shareUrl);
 
       if (qrRef.current) {
