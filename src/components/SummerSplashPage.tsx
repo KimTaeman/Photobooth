@@ -13,6 +13,8 @@ const SummerSplashPage: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
     const [finalImgError, setFinalImgError] = useState(false);
+    const [loadedImgs, setLoadedImgs] = useState<Set<string>>(new Set());
+    const markLoaded = (key: string) => setLoadedImgs(prev => new Set(prev).add(key));
     const videoRef = React.useRef<HTMLVideoElement>(null);
 
     if (!sessionId) {
@@ -131,12 +133,10 @@ const SummerSplashPage: React.FC = () => {
                 <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Image size={18} /> Final Photo Strip</div>
                     <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9' }}>
-                        <img
-                            src={finalUrl}
-                            alt="Final Strip"
-                            style={{ width: '100%', display: 'block' }}
-                            onError={() => setFinalImgError(true)}
-                        />
+                        <div style={{ position: 'relative', width: '100%', minHeight: '120px' }}>
+                            <div className={`skeleton${loadedImgs.has('final') ? ' skeleton-hidden' : ''}`} style={{ borderRadius: '12px' }} />
+                            <img src={finalUrl} alt="Final Strip" style={{ width: '100%', display: 'block', opacity: loadedImgs.has('final') ? 1 : 0, transition: 'opacity 0.4s' }} onLoad={() => markLoaded('final')} onError={() => setFinalImgError(true)} />
+                        </div>
                     </div>
                     <a href={finalDownloadUrl} download="SummerSplash_PhotoStrip.jpg" className="btn btn-primary" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -153,7 +153,10 @@ const SummerSplashPage: React.FC = () => {
                     <div className="card" style={{ background: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '1.1rem', color: '#1E3A5F', display: 'flex', alignItems: 'center', gap: '8px' }}><Clapperboard size={18} /> GIF Clip</div>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9' }}>
-                            <img src={gifUrl} alt="GIF Clip" style={{ width: '100%', display: 'block' }} />
+                            <div style={{ position: 'relative', width: '100%', minHeight: '120px' }}>
+                                <div className={`skeleton${loadedImgs.has('gif') ? ' skeleton-hidden' : ''}`} style={{ borderRadius: '12px' }} />
+                                <img src={gifUrl} alt="GIF Clip" style={{ width: '100%', display: 'block', opacity: loadedImgs.has('gif') ? 1 : 0, transition: 'opacity 0.4s' }} onLoad={() => markLoaded('gif')} />
+                            </div>
                         </div>
                         <a href={gifDownloadUrl!} download="SummerSplash_Clip.gif" style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -209,12 +212,10 @@ const SummerSplashPage: React.FC = () => {
                     <div className="shots-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {shots.map((shot, i) => (
                             <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', background: '#F1F5F9' }}>
-                                <img
-                                    src={shot.url}
-                                    alt={`Shot ${i + 1}`}
-                                    style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }}
-                                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
-                                />
+                                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
+                                    <div className={`skeleton${loadedImgs.has(`shot${i}`) ? ' skeleton-hidden' : ''}`} style={{ borderRadius: '0' }} />
+                                    <img src={shot.url} alt={`Shot ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: loadedImgs.has(`shot${i}`) ? 1 : 0, transition: 'opacity 0.4s', position: 'absolute', inset: 0 }} onLoad={() => markLoaded(`shot${i}`)} onError={e => { (e.target as HTMLImageElement).style.opacity = '0.3'; markLoaded(`shot${i}`); }} />
+                                </div>
                                 <a href={shot.downloadUrl} download={`shot_${i + 1}_${sessionId}.jpg`} style={{
                                     position: 'absolute', bottom: '8px', right: '8px', padding: '6px 10px',
                                     fontSize: '0.7rem', borderRadius: '8px', background: '#F1F5F9',

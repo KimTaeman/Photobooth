@@ -7,6 +7,7 @@ import { logSession } from '../hooks/useSupabase';
 interface ResultScreenProps {
   isActive: boolean;
   photos: string[];
+  photosBursts?: string[][];
   videoBlob: Blob | null;
   selectedFrame: string | null;
   onNewSession: () => void;
@@ -15,6 +16,7 @@ interface ResultScreenProps {
 const ResultScreen: React.FC<ResultScreenProps> = ({
   isActive,
   photos,
+  photosBursts,
   videoBlob,
   selectedFrame,
   onNewSession,
@@ -57,36 +59,59 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const generateGif = async (photoUrls: string[], frameUrl: string): Promise<Blob> => {
+  const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][]): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
-    // Scale strip 1800×1200 → 720×480 (0.4×)
+    // Strip layout: 1800×1200 → 720×480 (0.4×)
     const w = 720, h = 480;
     const slotW = 334, slotH = 214;
     const coords = [
       { x: 18, y: 18 }, { x: 368, y: 18 },
       { x: 18, y: 248 }, { x: 368, y: 248 },
     ];
-    const photoImgs = await Promise.all(photoUrls.map(loadImage));
     const frameImg = await loadImage(frameUrl);
 
-    // Progressive reveal: each frame adds one more photo in the strip layout
-    const frames: string[] = [];
-    for (let i = 0; i < 4; i++) {
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const ctx = c.getContext('2d')!;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, w, h);
-      for (let j = 0; j <= i; j++) drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
-      ctx.drawImage(frameImg, 0, 0, w, h);
-      frames.push(c.toDataURL('image/jpeg', 0.85));
+    let frames: string[];
+
+    if (bursts && bursts.length === 4 && bursts[0]?.length > 0) {
+      // Action GIF: each slot animates through its burst frames simultaneously
+      const burstLen = bursts[0].length;
+      const burstImgs = await Promise.all(bursts.map(burst => Promise.all(burst.map(loadImage))));
+      frames = [];
+      for (let fi = 0; fi < burstLen; fi++) {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        for (let si = 0; si < 4; si++) {
+          const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
+          if (img) drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
+        }
+        ctx.drawImage(frameImg, 0, 0, w, h);
+        frames.push(c.toDataURL('image/jpeg', 0.82));
+      }
+      // Hold last frame
+      frames.push(frames[frames.length - 1], frames[frames.length - 1]);
+    } else {
+      // Fallback: progressive reveal with static photos
+      const photoImgs = await Promise.all(photoUrls.map(loadImage));
+      frames = [];
+      for (let i = 0; i < 4; i++) {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        for (let j = 0; j <= i; j++) drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
+        ctx.drawImage(frameImg, 0, 0, w, h);
+        frames.push(c.toDataURL('image/jpeg', 0.85));
+      }
+      frames.push(frames[3], frames[3]);
     }
-    // Hold on the final complete frame a bit longer
-    frames.push(frames[3], frames[3]);
 
     return new Promise((resolve, reject) => {
       createGIF(
-        { images: frames, gifWidth: w, gifHeight: h, interval: 0.5 },
+        { images: frames, gifWidth: w, gifHeight: h, interval: bursts ? 0.12 : 0.5 },
         (obj) => {
           if (obj.error) { reject(new Error(obj.errorMsg || 'GIF generation failed')); return; }
           fetch(obj.image).then(r => r.blob()).then(resolve).catch(reject);
@@ -150,7 +175,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 5. Generate & upload GIF clip
       setUploadStatus('Generating GIF clip...');
-      const gifBlob = await generateGif(photos, selectedFrame!);
+      const gifBlob = await generateGif(photos, selectedFrame!, photosBursts);
       await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
 
       // 6. Log session

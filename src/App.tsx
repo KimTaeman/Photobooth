@@ -7,12 +7,14 @@ import FrameSelectionScreen from './components/FrameSelectionScreen';
 import CameraScreen from './components/CameraScreen';
 import ResultScreen from './components/ResultScreen';
 import SummerSplashPage from './components/SummerSplashPage';
+import AdminPage from './components/AdminPage';
 import type { Screen } from './types';
 
 function PhotoboothApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('lock');
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
   const [sessionPhotos, setSessionPhotos] = useState<string[]>([]);
+  const [sessionBursts, setSessionBursts] = useState<string[][]>([]);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
   const handleUnlock = () => {
@@ -31,15 +33,18 @@ function PhotoboothApp() {
     setCurrentScreen('frames');
   };
 
-  const handleCameraComplete = (photos: string[], video: Blob | null) => {
+  const handleCameraComplete = (photos: string[], video: Blob | null, bursts: string[][]) => {
     setSessionPhotos(photos);
+    setSessionBursts(bursts);
     setVideoBlob(video);
     setCurrentScreen('result');
   };
 
   const handleNewSession = () => {
     sessionPhotos.forEach(url => URL.revokeObjectURL(url));
+    sessionBursts.flat().forEach(url => URL.revokeObjectURL(url));
     setSessionPhotos([]);
+    setSessionBursts([]);
     setVideoBlob(null);
     setSelectedFrame(null);
     setCurrentScreen('frames');
@@ -68,9 +73,10 @@ function PhotoboothApp() {
         onComplete={handleCameraComplete}
       />
 
-      <ResultScreen 
+      <ResultScreen
         isActive={currentScreen === 'result'}
         photos={sessionPhotos}
+        photosBursts={sessionBursts}
         videoBlob={videoBlob}
         selectedFrame={selectedFrame}
         onNewSession={handleNewSession}
@@ -85,6 +91,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PhotoboothApp />} />
         <Route path="/summer-splash" element={<SummerSplashPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
