@@ -66,15 +66,6 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
   const animationFrameRef = useRef<number | null>(null);
   const recordCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
-    if (isActive && !stream) {
-      startCamera();
-    }
-    return () => {
-      if (!isActive) stopCamera();
-    };
-  }, [isActive]);
-
   const startCamera = async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({
@@ -94,6 +85,16 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
       setStream(null);
     }
   };
+
+  useEffect(() => {
+    if (isActive && !stream) {
+      startCamera();
+    }
+    return () => {
+      if (!isActive) stopCamera();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
 
   const startVideoRecording = () => {
     if (!videoRef.current || !stream) return;
@@ -197,9 +198,12 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
     setTimeout(() => setFlash(false), 600);
   };
 
+  const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
+
   const startSession = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    setCapturedPhotos([]);
     const photos: string[] = [];
 
     startVideoRecording();
@@ -218,6 +222,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
 
       const photoUrl = await capturePhoto();
       photos.push(photoUrl);
+      setCapturedPhotos(prev => [...prev, photoUrl]);
       playShutter();
       triggerFlash();
 
@@ -265,6 +270,13 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
             />
           )}
         </div>
+      </div>
+      <div className="preview-strip">
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} className={`preview-slot${capturedPhotos[i] ? ' filled' : ''}${shotNum === i + 1 && isProcessing && !capturedPhotos[i] ? ' current' : ''}`}>
+            {capturedPhotos[i] && <img src={capturedPhotos[i]} alt={`Shot ${i + 1}`} />}
+          </div>
+        ))}
       </div>
       <div className="camera-bottom">
         <div id="camera-status">{status}</div>

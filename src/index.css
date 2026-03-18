@@ -404,3 +404,29 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .upload-overlay p { color: var(--text-muted); font-weight: 700; font-size: 1.1rem; font-family: 'Fredoka', sans-serif; }
+
+/* ---- Live Preview Strip (Camera Screen) ---- */
+.preview-strip {
+    display: flex; gap: 8px; justify-content: center;
+    padding: 10px 20px 0;
+}
+.preview-slot {
+    width: 72px; height: 48px; border-radius: 8px;
+    border: 2px solid var(--sky); background: rgba(186,230,253,0.15);
+    overflow: hidden; transition: border-color 0.3s, transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.preview-slot.filled { border-color: var(--success); }
+.preview-slot.current { border-color: var(--blue); transform: scale(1.08); }
+.preview-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---- Print ---- */
+@media print {
+    body * { visibility: hidden !important; }
+    .print-area, .print-area * { visibility: visible !important; }
+    .print-area {
+        position: fixed; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: white;
+    }
+    .print-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+}

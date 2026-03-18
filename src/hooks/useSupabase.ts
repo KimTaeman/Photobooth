@@ -18,3 +18,18 @@ export async function sha256(text: string) {
     const hash = await crypto.subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Requires a `sessions` table:
+// CREATE TABLE sessions (
+//   id text PRIMARY KEY,
+//   created_at timestamptz DEFAULT now(),
+//   frame text,
+//   has_video boolean
+// );
+export async function logSession(sessionId: string, frame: string | null, hasVideo: boolean) {
+    try {
+        await supabase.from('sessions').insert({ id: sessionId, frame, has_video: hasVideo });
+    } catch {
+        // non-critical — don't break the app if logging fails
+    }
+}
