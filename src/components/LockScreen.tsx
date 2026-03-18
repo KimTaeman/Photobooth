@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LockOpen } from 'lucide-react';
 import { PASSWORD_HASH, sha256 } from '../hooks/useSupabase';
 
 interface LockScreenProps {
@@ -55,7 +56,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isActive }) => {
         />
         <div className="lock-error">{error}</div>
         <button className="btn btn-primary btn-block" onClick={handleUnlock}>
-          🔓 Unlock
+          <LockOpen size={18} /> Unlock
         </button>
       </div>
     </div>
