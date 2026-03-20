@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, Zap, RefreshCw, Printer, Download } from 'lucide-react';
+import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, RefreshCw, Printer, Download } from 'lucide-react';
 import heroImg from '../assets/jin.jpg';
 const filterPrevImg = heroImg;
 
@@ -383,7 +383,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                       <Trash2 size={16} /> Reset All Sessions
                     </button>
                     <p style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '8px', textAlign: 'center' }}>
-                      Clears session history. Does not delete Cloudinary files.
+                      Clears session history. Does not delete Cloudinary files (Photo storage).
                     </p>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Stickers from './components/Stickers';
@@ -8,7 +8,10 @@ import CameraScreen from './components/CameraScreen';
 import ResultScreen from './components/ResultScreen';
 import SummerSplashPage from './components/SummerSplashPage';
 import AdminPage from './components/AdminPage';
+import NotFoundPage from './components/NotFoundPage';
 import type { Screen } from './types';
+import { getAllSettings } from './hooks/useSupabase';
+import type { RemoteConfig } from './hooks/useSupabase';
 
 function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean }) {
   const [currentScreen, setCurrentScreen] = useState<Screen>(isAdminAuthenticated ? 'frames' : 'lock');
@@ -16,6 +19,15 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   const [sessionPhotos, setSessionPhotos] = useState<string[]>([]);
   const [sessionBursts, setSessionBursts] = useState<string[][]>([]);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [config, setConfig] = useState<RemoteConfig | null>(null);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const remoteConfig = await getAllSettings();
+      setConfig(remoteConfig);
+    };
+    fetchConfig();
+  }, []);
 
   const handleUnlock = () => {
     setCurrentScreen('frames');
@@ -54,7 +66,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container theme-${config?.eventTheme || 'default'}`}>
       <Stickers />
       
       <LockScreen 
@@ -67,6 +79,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
         selectedFrame={selectedFrame}
         onSelectFrame={handleSelectFrame}
         onStartSession={handleStartSession}
+        availableFrames={config?.availableFrames}
       />
 
       <CameraScreen 
@@ -74,6 +87,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
         selectedFrame={selectedFrame}
         onBack={handleCameraBack}
         onComplete={handleCameraComplete}
+        config={config}
       />
 
       <ResultScreen
@@ -97,7 +111,7 @@ function App() {
         <Route path="/" element={<PhotoboothApp isAdminAuthenticated={isAdminAuthenticated} />} />
         <Route path="/summer-splash" element={<SummerSplashPage />} />
         <Route path="/admin" element={<AdminPage authed={isAdminAuthenticated} setAuthed={setIsAdminAuthenticated} />} />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </HashRouter>
   );

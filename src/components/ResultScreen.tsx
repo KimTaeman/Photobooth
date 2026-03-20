@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Sparkles, Download, Film, RotateCcw, QrCode, Printer } from 'lucide-react';
+import { Sparkles, Download, Film, RotateCcw, QrCode, Printer, WifiOff } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
-import { logSession, getSetting } from '../hooks/useSupabase';
+import { logSession } from '../hooks/useSupabase';
+import { useUploadQueue } from '../hooks/useUploadQueue';
 
 interface ResultScreenProps {
   isActive: boolean;
@@ -27,8 +28,10 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   const [downloadPageUrl, setDownloadPageUrl] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const qrRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { addToQueue, pendingCount } = useUploadQueue();
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -59,7 +62,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][], filter = 'none'): Promise<Blob> => {
+  const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][]): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
     // Strip layout: 2752x1536 scaled down to ~860x480 for GIF
     const w = 860, h = 480;
@@ -129,13 +132,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   };
 
   const processAndUpload = async () => {
+    const sessionId = `session_${Date.now()}`;
+    let hasVideo = !!videoBlob;
+
     try {
       setUploadStatus('Processing memories...');
+      setIsOfflineMode(false);
+      
       if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
       if (videoBlob) setVideoPreviewUrl(URL.createObjectURL(videoBlob));
-
-      // 0. Fetch global filter
-      const activeFilter = await getSetting('active_filter', 'none');
 
       // 1. Create Final Photo Strip
       const canvas = document.createElement('canvas');
@@ -168,34 +173,54 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       setResultImg(URL.createObjectURL(finalPhotoBlob));
       setResultBlob(finalPhotoBlob);
 
-      // 2. Upload individual shots
-      setUploadStatus('Uploading individual shots...');
-      const sessionId = `session_${Date.now()}`;
-      await Promise.all(photos.map(async (pUrl, i) => {
-        const response = await fetch(pUrl);
-        const blob = await response.blob();
-        await uploadToCloudinary(blob, 'image', `${sessionId}_shot_${i + 1}`);
-      }));
+      // Generate GIF clip
+      setUploadStatus('Generating GIF clip...');
+      const gifBlob = await generateGif(photos, selectedFrame!, photosBursts);
 
-      // 3. Upload final strip
-      setUploadStatus('Uploading final photo strip...');
-      await uploadToCloudinary(finalPhotoBlob, 'image', `${sessionId}_final`);
+      // 2-5. Upload everything
+      const uploadTasks = [
+        // Individual shots
+        ...photos.map(async (pUrl, i) => {
+          const response = await fetch(pUrl);
+          const blob = await response.blob();
+          try {
+            await uploadToCloudinary(blob, 'image', `${sessionId}_shot_${i + 1}`);
+          } catch (e) {
+            await addToQueue(blob, 'image', `${sessionId}_shot_${i + 1}`, sessionId);
+          }
+        }),
+        // Final strip
+        (async () => {
+          try {
+            await uploadToCloudinary(finalPhotoBlob, 'image', `${sessionId}_final`);
+            await logSession(sessionId, selectedFrame, hasVideo);
+          } catch (e) {
+            await addToQueue(finalPhotoBlob, 'image', `${sessionId}_final`, sessionId, { frame: selectedFrame, hasVideo });
+            setIsOfflineMode(true);
+          }
+        })(),
+        // GIF clip
+        (async () => {
+          try {
+            await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
+          } catch (e) {
+            await addToQueue(gifBlob, 'image', `${sessionId}_clip`, sessionId);
+          }
+        })()
+      ];
 
-      // 4. Upload video
-      let hasVideo = false;
       if (videoBlob) {
-        setUploadStatus('Uploading video...');
-        await uploadToCloudinary(videoBlob, 'video', `${sessionId}_video`);
-        hasVideo = true;
+        uploadTasks.push((async () => {
+          try {
+            await uploadToCloudinary(videoBlob, 'video', `${sessionId}_video`);
+          } catch (e) {
+            await addToQueue(videoBlob, 'video', `${sessionId}_video`, sessionId);
+          }
+        })());
       }
 
-      // 5. Generate & upload GIF clip
-      setUploadStatus('Generating GIF clip...');
-      const gifBlob = await generateGif(photos, selectedFrame!, photosBursts, activeFilter);
-      await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
-
-      // 6. Log session
-      await logSession(sessionId, selectedFrame, hasVideo);
+      setUploadStatus('Uploading memories...');
+      await Promise.all(uploadTasks);
 
       // 7. Generate QR code
       setUploadStatus('Generating sharing link...');
@@ -212,7 +237,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       setUploadStatus(null);
     } catch (err) {
       console.error('Processing/Upload failed:', err);
-      setUploadStatus('Upload failed. Please try again.');
+      setUploadStatus('Processing failed. Please try again.');
     }
   };
 
@@ -251,6 +276,24 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         <div className="result-header">
           <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}><Sparkles size={32} /> Your Photobooth Memories!</h1>
           <p>Scan the QR code to access all your photos and videos</p>
+          
+          {(isOfflineMode || pendingCount > 0) && (
+            <div className="offline-badge" style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              background: 'rgba(234, 88, 12, 0.1)', 
+              color: '#ea580c',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              marginTop: '8px'
+            }}>
+              <WifiOff size={16} /> 
+              {isOfflineMode ? 'Saved locally (Offline)' : `${pendingCount} uploads pending...`}
+            </div>
+          )}
         </div>
 
         <div className="result-main">

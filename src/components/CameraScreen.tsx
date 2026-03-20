@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, RotateCcw, Check } from 'lucide-react';
-import { getSetting } from '../hooks/useSupabase';
+import type { RemoteConfig } from '../hooks/useSupabase';
 
 const audioCtx = { current: null as AudioContext | null };
 const getAudioCtx = () => {
@@ -33,9 +33,10 @@ interface CameraScreenProps {
   selectedFrame: string | null;
   onBack: () => void;
   onComplete: (photos: string[], videoBlob: Blob | null, bursts: string[][]) => void;
+  config: RemoteConfig | null;
 }
 
-const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, onBack, onComplete }) => {
+const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, onBack, onComplete, config }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [shotNum, setShotNum] = useState(1);
@@ -48,10 +49,10 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [previewCountdown, setPreviewCountdown] = useState(3);
   const [retakeCount, setRetakeCount] = useState(0);
-  const [testMode, setTestMode] = useState(false);
-  const [enableVideo, setEnableVideo] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('none');
-  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  const testMode = config?.eventTheme === 'test';
+  const enableVideo = config?.enableVideo ?? true;
+  const activeFilter = config?.activeFilter ?? 'none';
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
@@ -101,20 +102,6 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         videoRef.current.load();
         if (stream) videoRef.current.srcObject = stream;
       }
-
-      const loadSettings = async () => {
-        setLoadingSettings(true);
-        const [tm, ev, af] = await Promise.all([
-          getSetting('test_mode', 'false'),
-          getSetting('enable_video', 'true'),
-          getSetting('active_filter', 'none')
-        ]);
-        setTestMode(tm === 'true');
-        setEnableVideo(ev === 'true');
-        setActiveFilter(af);
-        setLoadingSettings(false);
-      };
-      loadSettings();
     }
 
     return () => { if (!isActive) stopCamera(); };
@@ -252,7 +239,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
 
       while (decision === 'retake') {
         setStatus(`Pose! Shot ${i} of 4`);
-        const countdownStart = testMode ? 3 : 10;
+        const countdownStart = testMode ? 3 : (config?.countdownDuration || 10);
         for (let count = countdownStart; count > 0; count--) {
           setCountdown(count); playTick();
           await new Promise(r => setTimeout(r, 1000));
@@ -280,7 +267,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       photos.push(photoUrl);
       bursts.push(burst);
       setCapturedPhotos(prev => [...prev, photoUrl]);
-      if (i < 4) await new Promise(r => setTimeout(r, testMode ? 200 : 600));
+      if (i < 4) await new Promise(r => setTimeout(r, testMode ? 200 : (config?.captureDelay || 1) * 1000));
     }
 
     setStatus('Processing...');
@@ -323,8 +310,8 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         ))}
       </div>
       <div className="camera-bottom">
-        <div id="camera-status">{loadingSettings ? 'Loading settings...' : status}</div>
-        <button className="shutter-btn" onClick={startSession} disabled={isProcessing || loadingSettings}>
+        <div id="camera-status">{status}</div>
+        <button className="shutter-btn" onClick={startSession} disabled={isProcessing}>
           <svg className="shutter-icon" viewBox="0 0 24 24">
             <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
             <path d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" />

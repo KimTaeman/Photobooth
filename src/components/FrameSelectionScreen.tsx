@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Palette, Camera, Sun } from 'lucide-react';
-import type { Frame } from '../types';
 
 interface FrameSelectionScreenProps {
   onStartSession: (frame: string) => void;
   isActive: boolean;
   selectedFrame: string | null;
   onSelectFrame: (frame: string) => void;
+  availableFrames?: string[];
 }
 
-const frames: Frame[] = [
-  { id: 'frame1', image: '/frame1.png', label: 'Frame 1' },
-  { id: 'frame2', image: '/frame2.png', label: 'Frame 2' },
-];
-
-const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({ onStartSession, isActive, selectedFrame, onSelectFrame }) => {
+const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({ 
+  onStartSession, 
+  isActive, 
+  selectedFrame, 
+  onSelectFrame,
+  availableFrames = ['/frame1.png', '/frame2.png']
+}) => {
   const [isIdle, setIsIdle] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const frames = availableFrames.map((f, i) => ({
+    id: `frame_${i}`,
+    image: f,
+    label: `Frame ${i + 1}`
+  }));
 
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);

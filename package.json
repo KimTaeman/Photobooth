@@ -16,6 +16,7 @@
     "@cloudinary/react": "^1.14.4",
     "@cloudinary/url-gen": "^1.22.0",
     "@supabase/supabase-js": "^2.99.2",
+    "@tauri-apps/plugin-fs": "^2.4.5",
     "cloudinary-core": "^2.14.1",
     "gifshot": "^0.4.5",
     "lucide-react": "^0.577.0",

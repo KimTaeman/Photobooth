@@ -28,13 +28,54 @@ export async function getSetting(key: string, defaultValue: string): Promise<str
     try {
         const { data, error } = await supabase.from('settings').select('value').eq('key', key).single();
         if (error) {
-            console.warn(`Setting ${key} not found, using default: ${defaultValue}`, error);
+            console.warn(`Setting ${key} not found, using default: ${defaultValue}`);
             return defaultValue;
         }
         return data?.value ?? defaultValue;
     } catch (err) {
         console.error(`Error fetching setting ${key}:`, err);
         return defaultValue;
+    }
+}
+
+export interface RemoteConfig {
+    eventTheme: string;
+    availableFrames: string[];
+    countdownDuration: number;
+    captureDelay: number;
+    enableVideo: boolean;
+    activeFilter: string;
+}
+
+export async function getAllSettings(): Promise<RemoteConfig> {
+    const defaultFrames = ['/frame1.png', '/frame2.png'];
+    try {
+        const { data, error } = await supabase.from('settings').select('*');
+        if (error) throw error;
+
+        const settingsMap = (data || []).reduce((acc: any, curr: any) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {});
+
+        return {
+            eventTheme: settingsMap['event_theme'] || 'summer-splash',
+            availableFrames: settingsMap['available_frames'] ? JSON.parse(settingsMap['available_frames']) : defaultFrames,
+            countdownDuration: parseInt(settingsMap['countdown_duration'] || '5'),
+            captureDelay: parseInt(settingsMap['capture_delay'] || '3'),
+            enableVideo: settingsMap['enable_video'] === 'true',
+            activeFilter: settingsMap['active_filter'] || 'none',
+        };
+    } catch (err) {
+        console.error('Error fetching all settings:', err);
+        return {
+            eventTheme: 'summer-splash',
+            availableFrames: defaultFrames,
+            countdownDuration: 5,
+            captureDelay: 3,
+            enableVideo: true,
+            activeFilter: 'none',
+        };
     }
 }
 

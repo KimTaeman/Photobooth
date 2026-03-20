@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { getSetting } from '../hooks/useSupabase';
 
 const SummerSplashPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -63,12 +62,77 @@ const SummerSplashPage: React.FC = () => {
         }
     };
 
-    if (finalImgError) {
+    if (finalImgError || !sessionId) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', padding: '20px', flexDirection: 'column', gap: '16px' }}>
-                <AlertCircle size={48} color="#EF4444" />
-                <h2 style={{ color: '#1E3A5F', fontFamily: 'Fredoka, sans-serif' }}>Session Not Found</h2>
-                <p style={{ color: '#64748B', maxWidth: '300px' }}>This link may have expired or is invalid. Photos are only available for 24 hours after the session.</p>
+            <div className="summer-splash-page" style={{
+                background: 'linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%)',
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '20px',
+                fontFamily: 'Nunito, sans-serif'
+            }}>
+                <div className="glass-card" style={{
+                    padding: '48px 32px',
+                    maxWidth: '450px',
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '24px',
+                    borderRadius: '32px',
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 20px 40px rgba(59, 130, 246, 0.08)',
+                    border: '1.5px solid rgba(255, 255, 255, 0.8)'
+                }}>
+                    <div style={{
+                        width: '90px',
+                        height: '90px',
+                        borderRadius: '50%',
+                        background: 'rgba(59, 130, 246, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#3B82F6',
+                        marginBottom: '8px'
+                    }}>
+                        <Clock size={48} strokeWidth={1.5} />
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <h1 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', fontSize: '1.8rem', margin: 0 }}>
+                            Memories Expired
+                        </h1>
+                        <p style={{ color: '#64748B', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>
+                            Oops! It looks like this session has expired or is no longer available.
+                        </p>
+                    </div>
+
+                    <div style={{
+                        background: 'rgba(254, 249, 195, 0.5)',
+                        padding: '16px 20px',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        textAlign: 'left'
+                    }}>
+                        <AlertCircle size={20} color="#92400E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <p style={{ color: '#92400E', fontSize: '0.85rem', margin: 0, fontWeight: 600 }}>
+                            For privacy and storage, all photobooth memories are permanently deleted 24 hours after capture.
+                        </p>
+                    </div>
+                    
+                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', width: '100%', paddingTop: '10px' }}>
+                        <p style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <Camera size={14} /> Summer Splash 2026
+                        </p>
+                    </div>
+                </div>
             </div>
         );
     }
