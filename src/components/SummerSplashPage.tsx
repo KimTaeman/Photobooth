@@ -1,7 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard } from 'lucide-react';
+import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard, Home } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
+import Stickers from './Stickers';
+import { Link } from 'react-router-dom';
 
 const SummerSplashPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -65,7 +67,7 @@ const SummerSplashPage: React.FC = () => {
     if (finalImgError || !sessionId) {
         return (
             <div className="summer-splash-page" style={{
-                background: 'linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%)',
+                background: 'url("/background.png") center/cover no-repeat',
                 height: '100vh',
                 display: 'flex',
                 flexDirection: 'column',
@@ -73,8 +75,21 @@ const SummerSplashPage: React.FC = () => {
                 justifyContent: 'center',
                 textAlign: 'center',
                 padding: '20px',
-                fontFamily: 'Nunito, sans-serif'
+                fontFamily: 'Nunito, sans-serif',
+                position: 'relative',
+                overflow: 'hidden'
             }}>
+                <Stickers />
+
+                {/* Overlay to ensure readability */}
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(255, 255, 255, 0.45)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 0
+                }} />
+
                 <div className="glass-card" style={{
                     padding: '48px 32px',
                     maxWidth: '450px',
@@ -84,10 +99,12 @@ const SummerSplashPage: React.FC = () => {
                     alignItems: 'center',
                     gap: '24px',
                     borderRadius: '32px',
-                    background: 'rgba(255, 255, 255, 0.7)',
+                    background: 'rgba(255, 255, 255, 0.75)',
                     backdropFilter: 'blur(20px)',
-                    boxShadow: '0 20px 40px rgba(59, 130, 246, 0.08)',
-                    border: '1.5px solid rgba(255, 255, 255, 0.8)'
+                    boxShadow: '0 20px 40px rgba(59, 130, 246, 0.12)',
+                    border: '1.5px solid rgba(255, 255, 255, 0.8)',
+                    zIndex: 1,
+                    position: 'relative'
                 }}>
                     <div style={{
                         width: '90px',
@@ -113,18 +130,29 @@ const SummerSplashPage: React.FC = () => {
                     </div>
 
                     <div style={{
-                        background: 'rgba(254, 249, 195, 0.5)',
+                        background: 'rgba(254, 249, 195, 0.6)',
                         padding: '16px 20px',
                         borderRadius: '20px',
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '12px',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        border: '1px solid rgba(250, 204, 21, 0.3)'
                     }}>
                         <AlertCircle size={20} color="#92400E" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <p style={{ color: '#92400E', fontSize: '0.85rem', margin: 0, fontWeight: 600 }}>
                             For privacy and storage, all photobooth memories are permanently deleted 24 hours after capture.
                         </p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '12px' }}>
+                        <Link to="/" className="btn btn-primary btn-lg" style={{
+                            textDecoration: 'none',
+                            width: '100%',
+                            fontSize: '1rem'
+                        }}>
+                            <Home size={18} /> Go to Photobooth
+                        </Link>
                     </div>
                     
                     <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', width: '100%', paddingTop: '10px' }}>

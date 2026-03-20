@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Home, AlertCircle, Camera } from 'lucide-react';
+import Stickers from './Stickers';
 
 const NotFoundPage: React.FC = () => {
   return (
@@ -12,85 +13,95 @@ const NotFoundPage: React.FC = () => {
       height: '100vh',
       textAlign: 'center',
       padding: '20px',
-      background: 'linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%)',
+      background: 'url("/background.png") center/cover no-repeat',
+      position: 'relative',
       fontFamily: 'Nunito, sans-serif'
     }}>
+      {/* Decorative Stickers */}
+      <Stickers />
+      
+      {/* Overlay to ensure readability */}
       <div style={{
-        background: 'white',
-        padding: '40px',
-        borderRadius: '30px',
-        boxShadow: '0 10px 40px rgba(59, 130, 246, 0.1)',
-        maxWidth: '400px',
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(255, 255, 255, 0.45)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 0
+      }} />
+
+      <div className="glass-card" style={{
+        padding: '48px 32px',
+        maxWidth: '450px',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '20px'
+        gap: '24px',
+        borderRadius: '32px',
+        background: 'rgba(255, 255, 255, 0.75)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 20px 40px rgba(59, 130, 246, 0.12)',
+        border: '1.5px solid rgba(255, 255, 255, 0.8)',
+        zIndex: 1,
+        position: 'relative'
       }}>
         <div style={{
-          width: '80px',
-          height: '80px',
+          width: '90px',
+          height: '90px',
           borderRadius: '50%',
-          background: 'rgba(239, 68, 68, 0.1)',
+          background: 'rgba(239, 68, 68, 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#EF4444'
+          color: '#EF4444',
+          marginBottom: '8px'
         }}>
-          <AlertCircle size={40} />
+          <AlertCircle size={48} strokeWidth={1.5} />
         </div>
         
-        <h1 style={{ 
-          fontFamily: 'Fredoka, sans-serif', 
-          color: '#1E3A5F', 
-          fontSize: '2rem',
-          margin: 0
-        }}>
-          404
-        </h1>
-        
-        <h2 style={{ 
-          fontFamily: 'Fredoka, sans-serif', 
-          color: '#1E3A5F', 
-          fontSize: '1.2rem',
-          margin: 0
-        }}>
-          Page Not Found
-        </h2>
-        
-        <p style={{ color: '#64748B', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>
-          Oops! The page you're looking for doesn't exist or has been moved.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '12px', marginTop: '10px' }}>
-          <Link to="/" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '14px 20px',
-            borderRadius: '50px',
-            background: '#3B82F6',
-            color: 'white',
-            fontFamily: 'Fredoka, sans-serif',
-            fontWeight: 600,
-            textDecoration: 'none',
-            fontSize: '1rem',
-            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h1 style={{ 
+            fontFamily: 'Fredoka, sans-serif', 
+            color: '#1E3A5F', 
+            fontSize: '2.5rem',
+            margin: 0,
+            lineHeight: 1
           }}>
-            <Home size={18} /> Back to Home
+            404
+          </h1>
+          <h2 style={{ 
+            fontFamily: 'Fredoka, sans-serif', 
+            color: '#3B82F6', 
+            fontSize: '1.4rem',
+            margin: 0
+          }}>
+            Page Not Found
+          </h2>
+          <p style={{ color: '#64748B', fontSize: '1rem', lineHeight: '1.6', margin: 0, marginTop: '8px' }}>
+            Oops! This page is playing hide and seek. We can't seem to find it!
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '12px', marginTop: '8px' }}>
+          <Link to="/" className="btn btn-primary btn-lg" style={{
+            textDecoration: 'none',
+            width: '100%',
+            fontSize: '1.1rem'
+          }}>
+            <Home size={20} /> Back to Home
           </Link>
           
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: '8px',
             color: '#94A3B8',
-            fontSize: '0.8rem',
-            fontWeight: 700
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            marginTop: '10px'
           }}>
-            <Camera size={14} /> Photobooth 2026
+            <Camera size={16} /> Summer Splash 2026
           </div>
         </div>
       </div>
