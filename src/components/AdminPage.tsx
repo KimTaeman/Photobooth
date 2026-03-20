@@ -2,14 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate } from 'lucide-react';
-import heroImg from '../assets/hero.png';
+import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, Zap, RefreshCw, Printer, Download } from 'lucide-react';
+import heroImg from '../assets/jin.jpg';
+const filterPrevImg = heroImg;
 
 interface Session {
   id: string;
   created_at: string;
   frame: string | null;
   has_video: boolean;
+}
+
+interface AdminLog {
+  id: string;
+  created_at: string;
+  action: string;
 }
 
 const AVAILABLE_FILTERS = [
@@ -34,54 +41,132 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('none');
+  const [enableVideo, setEnableVideo] = useState(true);
+  const [testMode, setTestMode] = useState(false);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const logAdminAction = async (action: string) => {
+    try {
+      await supabase.from('admin_logs').insert({ action });
+    } catch (err) {
+      console.error('Failed to log admin action:', err);
+    }
+  };
 
   const handleLogin = async () => {
     const hash = await sha256(password);
     if (hash === PASSWORD_HASH) {
       setAuthed(true);
       setError('');
+      logAdminAction('Dashboard login');
+      // No need to call loadData here as the useEffect[authed] will trigger
     } else {
       setError('Incorrect password');
       setPassword('');
+      logAdminAction('Failed login attempt');
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [sessionsRes, filterSetting, videoSetting, testModeSetting, logsRes] = await Promise.all([
+        supabase.from('sessions').select('*').order('created_at', { ascending: false }),
+        getSetting('active_filter', 'none'),
+        getSetting('enable_video', 'true'),
+        getSetting('test_mode', 'false'),
+        supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(10)
+      ]);
+      
+      if (sessionsRes.error) console.error('Error fetching sessions:', sessionsRes.error);
+      if (logsRes.error) console.error('Error fetching admin logs:', logsRes.error);
+
+      setSessions((sessionsRes.data as Session[]) || []);
+      setActiveFilter(filterSetting);
+      setEnableVideo(videoSetting === 'true');
+      setTestMode(testModeSetting === 'true');
+      setLogs((logsRes.data as AdminLog[]) || []);
+    } catch (err) {
+      console.error('Failed to load admin data (exception):', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!authed) return;
-    
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load sessions and settings in parallel
-        const [sessionsRes, filterSetting] = await Promise.all([
-          supabase.from('sessions').select('*').order('created_at', { ascending: false }),
-          getSetting('active_filter', 'none')
-        ]);
-        
-        setSessions((sessionsRes.data as Session[]) || []);
-        setActiveFilter(filterSetting);
-      } catch (err) {
-        console.error('Failed to load admin data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [authed, setAuthed]);
+    if (authed) {
+      loadData();
+    }
+  }, [authed]);
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
-    await updateSetting('active_filter', activeFilter);
+    await Promise.all([
+      updateSetting('active_filter', activeFilter),
+      updateSetting('enable_video', enableVideo ? 'true' : 'false'),
+      updateSetting('test_mode', testMode ? 'true' : 'false')
+    ]);
+    logAdminAction('Updated settings');
     setIsSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
+  const handleResetSessions = async () => {
+    if (!window.confirm('WARNING: This will permanently delete ALL session records from the database. Photos in Cloudinary will NOT be deleted. Proceed?')) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      
+      setSessions([]);
+      logAdminAction('Reset all sessions');
+      alert('All session records have been cleared.');
+    } catch (err) {
+      console.error('Failed to reset sessions:', err);
+      alert('Error resetting sessions: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getThumbnail = (id: string) =>
     `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,h_267,c_fill/${id}_final.jpg`;
+
+  const getFullSizeUrl = (id: string) =>
+    `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${id}_final.jpg`;
+
+  const handleAdminPrint = (id: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const imgUrl = getFullSizeUrl(id);
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Photo Strip</title>
+          <style>
+            @page { size: auto; margin: 0; }
+            body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+            img { max-width: 100%; max-height: 100%; object-fit: contain; }
+          </style>
+        </head>
+        <body>
+          <img src="${imgUrl}" onload="window.print(); window.close();" />
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleAdminDownload = (id: string) => {
+    const link = document.createElement('a');
+    link.href = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/fl_attachment:SummerSplash_PhotoStrip/${id}_final.jpg`;
+    link.download = `SummerSplash_${id}.jpg`;
+    link.click();
+  };
 
   if (!authed) {
     return (
@@ -224,12 +309,82 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                       >
                         <div style={{ 
                           width: '100%', aspectRatio: '4/3', borderRadius: '8px', 
-                          backgroundImage: `url(${heroImg})`, backgroundPosition: 'center', backgroundSize: 'cover',
+                          backgroundImage: `url(${filterPrevImg})`, backgroundPosition: 'center', backgroundSize: 'cover',
                           filter: f.preview, border: '1px solid #E2E8F0'
                         }} />
                         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeFilter === f.id ? '#1E3A5F' : '#64748B' }}>{f.label}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', borderTop: '1px solid #F1F5F9', paddingTop: '24px' }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
+                      <Film size={18} color="#3B82F6" /> Session Options
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                        <div 
+                          onClick={() => setEnableVideo(!enableVideo)}
+                          style={{ 
+                            width: '44px', height: '24px', borderRadius: '12px', background: enableVideo ? '#3B82F6' : '#E2E8F0',
+                            position: 'relative', transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enableVideo ? '23px' : '3px', transition: 'all 0.2s' }} />
+                        </div>
+                        <span style={{ fontSize: '0.9rem', color: '#1E3A5F', fontWeight: 600 }}>Enable Video Recording</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                        <div 
+                          onClick={() => setTestMode(!testMode)}
+                          style={{ 
+                            width: '44px', height: '24px', borderRadius: '12px', background: testMode ? '#F59E0B' : '#E2E8F0',
+                            position: 'relative', transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: testMode ? '23px' : '3px', transition: 'all 0.2s' }} />
+                        </div>
+                        <span style={{ fontSize: '0.9rem', color: '#1E3A5F', fontWeight: 600 }}>Test Mode (Fast Countdowns)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
+                      <ShieldCheck size={18} color="#3B82F6" /> Recent Admin Logs
+                    </label>
+                    <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {logs.length > 0 ? logs.map(log => (
+                        <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748B' }}>
+                          <span style={{ fontWeight: 600 }}>{log.action}</span>
+                          <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      )) : (
+                        <div style={{ fontSize: '0.75rem', color: '#94A3B8', textAlign: 'center' }}>No recent logs</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
+                      <Trash2 size={18} color="#EF4444" /> Data Management
+                    </label>
+                    <button 
+                      onClick={handleResetSessions}
+                      style={{ 
+                        width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #FECACA',
+                        background: '#FEF2F2', color: '#EF4444', fontFamily: 'Fredoka, sans-serif',
+                        fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '8px', transition: 'all 0.2s'
+                      }}
+                    >
+                      <Trash2 size={16} /> Reset All Sessions
+                    </button>
+                    <p style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '8px', textAlign: 'center' }}>
+                      Clears session history. Does not delete Cloudinary files.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -253,14 +408,71 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
             {/* Recent gallery */}
             {sessions.length > 0 && (
               <div style={{ background: 'white', borderRadius: '20px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                <h2 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', margin: '0 0 20px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Camera size={20} color="#3B82F6" /> Recent Sessions
-                </h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h2 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Camera size={20} color="#3B82F6" /> Recent Sessions
+                  </h2>
+                  <button 
+                    onClick={loadData}
+                    disabled={loading}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', 
+                      borderRadius: '50px', border: '2px solid #BAE6FD', background: 'transparent', 
+                      color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, 
+                      cursor: 'pointer', fontSize: '0.8rem'
+                    }}
+                  >
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                  </button>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
                   {sessions.slice(0, 24).map(s => (
-                    <div key={s.id} style={{ borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9', position: 'relative' }}>
+                    <div key={s.id} className="admin-session-card" style={{ borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9', position: 'relative' }}>
                       <img src={getThumbnail(s.id)} alt={s.id} style={{ width: '100%', aspectRatio: '3/2', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2'; }} />
-                      <div style={{ padding: '6px 8px', fontSize: '0.65rem', color: '#64748B', fontWeight: 700 }}>
+                      
+                      <div className="admin-session-overlay" style={{ 
+                        position: 'absolute', inset: 0, background: 'rgba(30, 58, 95, 0.7)', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        opacity: 0, transition: 'opacity 0.2s', cursor: 'default'
+                      }}>
+                        <button 
+                          onClick={() => handleAdminPrint(s.id)}
+                          title="Print"
+                          style={{ 
+                            width: '36px', height: '36px', borderRadius: '50%', border: 'none', 
+                            background: 'white', color: '#3B82F6', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                        >
+                          <Printer size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleAdminDownload(s.id)}
+                          title="Download"
+                          style={{ 
+                            width: '36px', height: '36px', borderRadius: '50%', border: 'none', 
+                            background: 'white', color: '#3B82F6', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                        >
+                          <Download size={18} />
+                        </button>
+                        <a 
+                          href={`https://photobooth-teal-pi.vercel.app/#/summer-splash?id=${s.id}${s.has_video ? '&v=1' : ''}&g=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View Page"
+                          style={{ 
+                            width: '36px', height: '36px', borderRadius: '50%', border: 'none', 
+                            background: 'white', color: '#3B82F6', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                        >
+                          <LayoutTemplate size={18} />
+                        </a>
+                      </div>
+
+                      <div style={{ padding: '6px 8px', fontSize: '0.65rem', color: '#64748B', fontWeight: 700, background: 'white' }}>
                         {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {s.has_video ? '🎬' : '📷'}
                       </div>
                     </div>

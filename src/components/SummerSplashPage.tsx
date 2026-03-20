@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
+import { getSetting } from '../hooks/useSupabase';
 
 const SummerSplashPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -15,39 +16,29 @@ const SummerSplashPage: React.FC = () => {
     const [finalImgError, setFinalImgError] = useState(false);
     const [loadedImgs, setLoadedImgs] = useState<Set<string>>(new Set());
     const markLoaded = (key: string) => setLoadedImgs(prev => new Set(prev).add(key));
-    const videoRef = React.useRef<HTMLVideoElement>(null);
-
-    if (!sessionId) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', padding: '20px' }}>
-                <div>
-                    <h1 style={{ color: '#3B82F6', fontFamily: 'Fredoka, sans-serif' }}>Oops!</h1>
-                    <p style={{ color: '#64748B' }}>We couldn't find your session. Please try scanning the QR code again.</p>
-                </div>
-            </div>
-        );
-    }
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     const getCloudinaryUrl = (suffix: string, isVideo = false, download = false) => {
         const type = isVideo ? 'video' : 'image';
         const resource = 'upload';
         const filename = isVideo ? 'SummerSplash_Video' : (suffix.includes('final') ? 'SummerSplash_PhotoStrip' : `SummerSplash_Shot`);
         const attachment = download ? `fl_attachment:${filename}/` : '';
+        
         return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/${type}/${resource}/${attachment}${sessionId}_${suffix}`;
     };
 
-    const finalUrl = getCloudinaryUrl('final.jpg');
-    const finalDownloadUrl = getCloudinaryUrl('final.jpg', false, true);
-    const gifUrl = hasGif ? getCloudinaryUrl('clip.gif') : null;
-    const gifDownloadUrl = hasGif ? getCloudinaryUrl('clip.gif', false, true) : null;
-    const videoMp4Url = hasVideo ? getCloudinaryUrl('video.mp4', true) : null;
-    const videoWebmUrl = hasVideo ? getCloudinaryUrl('video.webm', true) : null;
-    const videoDownloadUrl = hasVideo ? getCloudinaryUrl('video.mp4', true, true) : null;
+    const finalUrl = useMemo(() => getCloudinaryUrl('final.jpg'), [sessionId]);
+    const finalDownloadUrl = useMemo(() => getCloudinaryUrl('final.jpg', false, true), [sessionId]);
+    const gifUrl = useMemo(() => hasGif ? getCloudinaryUrl('clip.gif') : null, [sessionId, hasGif]);
+    const gifDownloadUrl = useMemo(() => hasGif ? getCloudinaryUrl('clip.gif', false, true) : null, [sessionId, hasGif]);
+    const videoMp4Url = useMemo(() => hasVideo ? getCloudinaryUrl('video.mp4', true) : null, [sessionId, hasVideo]);
+    const videoWebmUrl = useMemo(() => hasVideo ? getCloudinaryUrl('video.webm', true) : null, [sessionId, hasVideo]);
+    const videoDownloadUrl = useMemo(() => hasVideo ? getCloudinaryUrl('video.mp4', true, true) : null, [sessionId, hasVideo]);
 
-    const shots = [1, 2, 3, 4].map(num => ({
+    const shots = useMemo(() => [1, 2, 3, 4].map(num => ({
         url: getCloudinaryUrl(`shot_${num}.jpg`),
         downloadUrl: getCloudinaryUrl(`shot_${num}.jpg`, false, true)
-    }));
+    })), [sessionId]);
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -214,7 +205,17 @@ const SummerSplashPage: React.FC = () => {
                             <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', background: '#F1F5F9' }}>
                                 <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
                                     <div className={`skeleton${loadedImgs.has(`shot${i}`) ? ' skeleton-hidden' : ''}`} style={{ borderRadius: '0' }} />
-                                    <img src={shot.url} alt={`Shot ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: loadedImgs.has(`shot${i}`) ? 1 : 0, transition: 'opacity 0.4s', position: 'absolute', inset: 0 }} onLoad={() => markLoaded(`shot${i}`)} onError={e => { (e.target as HTMLImageElement).style.opacity = '0.3'; markLoaded(`shot${i}`); }} />
+                                    <img 
+                                        src={shot.url} 
+                                        alt={`Shot ${i + 1}`} 
+                                        style={{ 
+                                            width: '100%', height: '100%', objectFit: 'cover', display: 'block', 
+                                            opacity: loadedImgs.has(`shot${i}`) ? 1 : 0, transition: 'opacity 0.4s', 
+                                            position: 'absolute', inset: 0
+                                        }} 
+                                        onLoad={() => markLoaded(`shot${i}`)} 
+                                        onError={e => { (e.target as HTMLImageElement).style.opacity = '0.3'; markLoaded(`shot${i}`); }} 
+                                    />
                                 </div>
                                 <a href={shot.downloadUrl} download={`shot_${i + 1}_${sessionId}.jpg`} style={{
                                     position: 'absolute', bottom: '8px', right: '8px', padding: '6px 10px',

@@ -378,6 +378,11 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     }
 }
 
+/* ---- Admin Styles ---- */
+.admin-session-card:hover .admin-session-overlay {
+    opacity: 1 !important;
+}
+
 /* ---- Recording indicator ---- */
 .rec-indicator {
     display: none; align-items: center; gap: 6px;
@@ -493,17 +498,44 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
 /* ---- Retake Overlay ---- */
 .retake-overlay {
-    position: absolute; inset: 0; z-index: 50;
+    position: absolute; inset: 0; z-index: 100;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(15, 30, 60, 0.75);
-    gap: 20px; animation: fadeIn 0.2s ease;
+    background: rgba(15, 23, 42, 0.92); /* Darker, more contrast */
+    backdrop-filter: blur(8px); /* Add some modern blur */
+    gap: 24px; animation: fadeIn 0.3s ease;
 }
 .retake-preview {
-    width: 78%; max-width: 520px; border-radius: 16px;
-    border: 4px solid white; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    width: 85%; max-width: 600px; border-radius: 12px;
+    border: 3px solid rgba(255,255,255,0.2); 
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
-.retake-actions { display: flex; gap: 16px; }
-.retake-btn { padding: 14px 32px !important; font-size: 1.05rem !important; }
+.retake-actions { display: flex; gap: 20px; }
+.retake-btn { 
+    padding: 16px 36px !important; 
+    font-size: 1.1rem !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: 50px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+}
+.retake-btn:active { transform: translateY(2px); }
+
+/* Custom Retake / Keep Button Colors */
+.retake-actions .btn-outline.retake-btn {
+    background: #F0F9FF !important;
+    color: #3B82F6 !important;
+    border: 2px solid #3B82F6 !important;
+}
+.retake-actions .btn-outline.retake-btn:disabled {
+    opacity: 0.5; cursor: not-allowed; border-color: #94A3B8 !important; color: #94A3B8 !important; background: #F1F5F9 !important;
+}
+.retake-actions .btn-primary.retake-btn {
+    background: #FACC15 !important; /* Yellow theme for keep */
+    color: #92400E !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3);
+}
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---- Idle / Attract Screen ---- */

@@ -26,26 +26,34 @@ export async function sha256(text: string) {
 // );
 export async function getSetting(key: string, defaultValue: string): Promise<string> {
     try {
-        const { data } = await supabase.from('settings').select('value').eq('key', key).single();
+        const { data, error } = await supabase.from('settings').select('value').eq('key', key).single();
+        if (error) {
+            console.warn(`Setting ${key} not found, using default: ${defaultValue}`, error);
+            return defaultValue;
+        }
         return data?.value ?? defaultValue;
-    } catch {
+    } catch (err) {
+        console.error(`Error fetching setting ${key}:`, err);
         return defaultValue;
     }
 }
 
 export async function updateSetting(key: string, value: string) {
     try {
-        await supabase.from('settings').upsert({ key, value });
+        const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
+        if (error) throw error;
     } catch (err) {
-        console.error('Failed to update setting:', err);
+        console.error(`Failed to update setting ${key}:`, err);
+        throw err; // Re-throw to handle in UI
     }
 }
 
 export async function logSession(sessionId: string, frame: string | null, hasVideo: boolean) {
     try {
-        await supabase.from('sessions').insert({ id: sessionId, frame, has_video: hasVideo });
-    } catch {
-        // non-critical — don't break the app if logging fails
+        const { error } = await supabase.from('sessions').insert({ id: sessionId, frame, has_video: hasVideo });
+        if (error) throw error;
+    } catch (err) {
+        console.error('Failed to log session:', err);
     }
 }
 

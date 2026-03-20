@@ -41,8 +41,11 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   };
 
   const handleNewSession = () => {
+    // Revoke URLs to free memory
     sessionPhotos.forEach(url => URL.revokeObjectURL(url));
     sessionBursts.flat().forEach(url => URL.revokeObjectURL(url));
+    
+    // Clear all session states
     setSessionPhotos([]);
     setSessionBursts([]);
     setVideoBlob(null);

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, RotateCcw, Check } from 'lucide-react';
+import { getSetting } from '../hooks/useSupabase';
 
 const audioCtx = { current: null as AudioContext | null };
 const getAudioCtx = () => {
@@ -46,6 +47,11 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [previewCountdown, setPreviewCountdown] = useState(3);
+  const [retakeCount, setRetakeCount] = useState(0);
+  const [testMode, setTestMode] = useState(false);
+  const [enableVideo, setEnableVideo] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('none');
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
@@ -61,7 +67,10 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         audio: false,
       });
       setStream(s);
-      if (videoRef.current) videoRef.current.srcObject = s;
+      if (videoRef.current) {
+        videoRef.current.srcObject = s;
+        videoRef.current.play().catch(e => console.error("Error playing video:", e));
+      }
     } catch (err) { alert('Camera error: ' + (err as Error).message); }
   };
 
@@ -70,7 +79,44 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   };
 
   useEffect(() => {
-    if (isActive && !stream) startCamera();
+    if (isActive && !stream) {
+      startCamera();
+    } else if (isActive && stream && videoRef.current) {
+      // Re-bind stream if it exists but video was reset
+      videoRef.current.srcObject = stream;
+    }
+    
+    if (isActive) {
+      // Clear previous session artifacts
+      setCapturedPhotos([]);
+      setShotNum(1);
+      setStatus('Get ready and press the button!');
+      setPreviewPhoto(null);
+      setFlash(false);
+      setIsProcessing(false);
+      setCountdown(null);
+
+      // Reload video to clear frozen frames, but must re-assign srcObject after
+      if (videoRef.current) {
+        videoRef.current.load();
+        if (stream) videoRef.current.srcObject = stream;
+      }
+
+      const loadSettings = async () => {
+        setLoadingSettings(true);
+        const [tm, ev, af] = await Promise.all([
+          getSetting('test_mode', 'false'),
+          getSetting('enable_video', 'true'),
+          getSetting('active_filter', 'none')
+        ]);
+        setTestMode(tm === 'true');
+        setEnableVideo(ev === 'true');
+        setActiveFilter(af);
+        setLoadingSettings(false);
+      };
+      loadSettings();
+    }
+
     return () => { if (!isActive) stopCamera(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
@@ -128,6 +174,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       const canvas = document.createElement('canvas');
       canvas.width = 1277; canvas.height = 685;
       const ctx = canvas.getContext('2d')!;
+      ctx.filter = activeFilter;
       ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
       drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -143,6 +190,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         const canvas = document.createElement('canvas');
         canvas.width = 1277; canvas.height = 685;
         const ctx = canvas.getContext('2d')!;
+        ctx.filter = activeFilter;
         ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
         drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -192,19 +240,22 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
     setCapturedPhotos([]);
     const photos: string[] = [];
     const bursts: string[][] = [];
-    startVideoRecording();
+    if (enableVideo) startVideoRecording();
 
     for (let i = 1; i <= 4; i++) {
       setShotNum(i);
+      setRetakeCount(0);
+      let shotRetakeCount = 0;
       let decision: 'keep' | 'retake' = 'retake';
       let photoUrl = '';
       let burst: string[] = [];
 
       while (decision === 'retake') {
         setStatus(`Pose! Shot ${i} of 4`);
-        for (let count = 3; count > 0; count--) {
+        const countdownStart = testMode ? 3 : 10;
+        for (let count = countdownStart; count > 0; count--) {
           setCountdown(count); playTick();
-          await new Promise(r => setTimeout(r, 800));
+          await new Promise(r => setTimeout(r, 1000));
         }
         setCountdown(null);
         if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -212,21 +263,32 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         burst = await captureFrameBurst();
         photoUrl = await capturePhoto();
         playShutter(); triggerFlash();
-        setPreviewPhoto(photoUrl);
-        decision = await waitForRetakeDecision();
+        
+        if (shotRetakeCount >= 2) {
+          decision = 'keep';
+        } else {
+          setPreviewPhoto(photoUrl);
+          decision = await waitForRetakeDecision();
+        }
+
+        if (decision === 'retake') {
+          shotRetakeCount++;
+          setRetakeCount(shotRetakeCount);
+        }
       }
 
       photos.push(photoUrl);
       bursts.push(burst);
       setCapturedPhotos(prev => [...prev, photoUrl]);
-      if (i < 4) await new Promise(r => setTimeout(r, 600));
+      if (i < 4) await new Promise(r => setTimeout(r, testMode ? 200 : 600));
     }
 
     setStatus('Processing...');
-    const videoBlob = await stopVideoRecording();
+    const videoBlob = enableVideo ? await stopVideoRecording() : null;
     onComplete(photos, videoBlob, bursts);
     setIsProcessing(false);
     setShotNum(1);
+    setRetakeCount(0);
   };
 
   return (
@@ -256,13 +318,13 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       <div className="preview-strip">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className={`preview-slot${capturedPhotos[i] ? ' filled' : ''}${shotNum === i + 1 && isProcessing && !capturedPhotos[i] ? ' current' : ''}`}>
-            {capturedPhotos[i] && <img src={capturedPhotos[i]} alt={`Shot ${i + 1}`} />}
+            {capturedPhotos[i] && <img src={capturedPhotos[i]} alt={`Shot ${i + 1}`} style={{ filter: activeFilter }} />}
           </div>
         ))}
       </div>
       <div className="camera-bottom">
-        <div id="camera-status">{status}</div>
-        <button className="shutter-btn" onClick={startSession} disabled={isProcessing}>
+        <div id="camera-status">{loadingSettings ? 'Loading settings...' : status}</div>
+        <button className="shutter-btn" onClick={startSession} disabled={isProcessing || loadingSettings}>
           <svg className="shutter-icon" viewBox="0 0 24 24">
             <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
             <path d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" />
@@ -271,9 +333,15 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       </div>
       {previewPhoto && (
         <div className="retake-overlay">
-          <img src={previewPhoto} className="retake-preview" alt="Preview" />
+          <img src={previewPhoto} className="retake-preview" alt="Preview" style={{ filter: activeFilter }} />
           <div className="retake-actions">
-            <button className="btn btn-outline retake-btn" onClick={handleRetake}><RotateCcw size={18} /> Retake</button>
+            <button 
+              className="btn btn-outline retake-btn" 
+              onClick={handleRetake} 
+              disabled={retakeCount >= 2}
+            >
+              <RotateCcw size={18} /> Retake ({2 - retakeCount} left)
+            </button>
             <button className="btn btn-primary retake-btn" onClick={handleKeep}><Check size={18} /> Keep ({previewCountdown})</button>
           </div>
         </div>

@@ -86,7 +86,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         for (let si = 0; si < 4; si++) {
           const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
           if (img) {
-            ctx.filter = filter;
+            ctx.filter = 'none';
             drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
           }
         }
@@ -107,7 +107,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
         for (let j = 0; j <= i; j++) {
-          ctx.filter = filter;
+          ctx.filter = 'none';
           drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
         }
         ctx.filter = 'none';
@@ -152,7 +152,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       const photoImgs = await Promise.all(photos.map(loadImage));
       photoImgs.forEach((img, i) => {
-        ctx.filter = activeFilter;
+        ctx.filter = 'none';
         drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH);
       });
 
