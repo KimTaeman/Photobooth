@@ -50,7 +50,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   const [previewCountdown, setPreviewCountdown] = useState(3);
   const [retakeCount, setRetakeCount] = useState(0);
 
-  const testMode = config?.eventTheme === 'test';
+  const testMode = config?.testMode ?? false;
   const enableVideo = config?.enableVideo ?? true;
   const activeFilter = config?.activeFilter ?? 'none';
 
@@ -80,14 +80,14 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   };
 
   useEffect(() => {
-    if (isActive && !stream) {
-      startCamera();
-    } else if (isActive && stream && videoRef.current) {
-      // Re-bind stream if it exists but video was reset
-      videoRef.current.srcObject = stream;
-    }
-    
     if (isActive) {
+      if (!stream) {
+        startCamera();
+      } else if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(e => console.error("Error playing video:", e));
+      }
+      
       // Clear previous session artifacts
       setCapturedPhotos([]);
       setShotNum(1);
@@ -96,14 +96,10 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       setFlash(false);
       setIsProcessing(false);
       setCountdown(null);
-
-      // Reload video to clear frozen frames, but must re-assign srcObject after
-      if (videoRef.current) {
-        videoRef.current.load();
-        if (stream) videoRef.current.srcObject = stream;
-      }
+    } else {
+        stopCamera();
     }
-
+    
     return () => { if (!isActive) stopCamera(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
@@ -239,7 +235,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
 
       while (decision === 'retake') {
         setStatus(`Pose! Shot ${i} of 4`);
-        const countdownStart = testMode ? 3 : (config?.countdownDuration || 10);
+        const countdownStart = testMode ? 2 : (config?.countdownDuration || 10);
         for (let count = countdownStart; count > 0; count--) {
           setCountdown(count); playTick();
           await new Promise(r => setTimeout(r, 1000));

@@ -45,6 +45,7 @@ export interface RemoteConfig {
     captureDelay: number;
     enableVideo: boolean;
     activeFilter: string;
+    testMode: boolean;
 }
 
 export async function getAllSettings(): Promise<RemoteConfig> {
@@ -65,6 +66,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             captureDelay: parseInt(settingsMap['capture_delay'] || '3'),
             enableVideo: settingsMap['enable_video'] === 'true',
             activeFilter: settingsMap['active_filter'] || 'none',
+            testMode: settingsMap['test_mode'] === 'true',
         };
     } catch (err) {
         console.error('Error fetching all settings:', err);
@@ -75,6 +77,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             captureDelay: 3,
             enableVideo: true,
             activeFilter: 'none',
+            testMode: false,
         };
     }
 }

@@ -10,7 +10,7 @@ import SummerSplashPage from './components/SummerSplashPage';
 import AdminPage from './components/AdminPage';
 import NotFoundPage from './components/NotFoundPage';
 import type { Screen } from './types';
-import { getAllSettings } from './hooks/useSupabase';
+import { getAllSettings, supabase } from './hooks/useSupabase';
 import type { RemoteConfig } from './hooks/useSupabase';
 
 function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean }) {
@@ -27,6 +27,18 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
       setConfig(remoteConfig);
     };
     fetchConfig();
+
+    // Subscribe to real-time updates for settings
+    const channel = supabase
+      .channel('public:settings')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+        fetchConfig();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUnlock = () => {

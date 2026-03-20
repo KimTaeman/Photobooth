@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Sparkles, Download, Film, RotateCcw, QrCode, Printer, WifiOff } from 'lucide-react';
+import { Sparkles, Download, Film, RotateCcw, QrCode, WifiOff } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
 import { logSession } from '../hooks/useSupabase';
 import { useUploadQueue } from '../hooks/useUploadQueue';
@@ -257,8 +257,6 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     a.click();
   };
 
-  const handlePrint = () => window.print();
-
   useEffect(() => {
     if (isActive && photos.length === 4 && selectedFrame) {
       processAndUpload();
@@ -358,7 +356,6 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           {videoBlob && (
             <button className="btn btn-blue btn-lg" onClick={downloadLocalVideo}><Film size={20} /> Save Video</button>
           )}
-          <button className="btn btn-outline btn-lg" onClick={handlePrint}><Printer size={20} /> Print</button>
           <button className="btn btn-outline btn-lg" onClick={onNewSession}><RotateCcw size={20} /> New Session</button>
         </div>
       </div>
