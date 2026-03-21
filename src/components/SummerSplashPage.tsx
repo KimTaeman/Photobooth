@@ -17,7 +17,7 @@ const SummerSplashPage: React.FC = () => {
     const [finalImgError, setFinalImgError] = useState(false);
     const [loadedImgs, setLoadedImgs] = useState<Set<string>>(new Set());
     const markLoaded = (key: string) => setLoadedImgs(prev => new Set(prev).add(key));
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
     const getCloudinaryUrl = (suffix: string, isVideo = false, download = false) => {
         const type = isVideo ? 'video' : 'image';
@@ -208,6 +208,63 @@ const SummerSplashPage: React.FC = () => {
                 }}>
                     <Share2 size={16} />
                     {shareCopied ? 'Link Copied!' : 'Share Memories'}
+                </button>
+
+                <button 
+                    disabled={isDownloadingAll}
+                    onClick={async () => {
+                        setIsDownloadingAll(true);
+                        const toDownload = [
+                            { url: finalDownloadUrl, name: 'SummerSplash_PhotoStrip.jpg' },
+                            ...(gifDownloadUrl ? [{ url: gifDownloadUrl, name: 'SummerSplash_Clip.gif' }] : []),
+                            ...(videoDownloadUrl ? [{ url: videoDownloadUrl, name: 'SummerSplash_Video.mp4' }] : []),
+                            ...shots.map((s, i) => ({ url: s.downloadUrl, name: `SummerSplash_Shot_${i + 1}.jpg` }))
+                        ];
+
+                        for (const item of toDownload) {
+                            try {
+                                const resp = await fetch(item.url);
+                                const blob = await resp.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = item.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                await new Promise(r => setTimeout(r, 500));
+                            } catch (e) {
+                                console.error('Failed to download', item.name, e);
+                            }
+                        }
+                        setIsDownloadingAll(false);
+                    }} 
+                    style={{
+                        marginTop: '14px', marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 20px', borderRadius: '50px', border: 'none',
+                        background: isDownloadingAll ? '#94A3B8' : '#3B82F6', 
+                        color: 'white',
+                        fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.95rem',
+                        cursor: isDownloadingAll ? 'not-allowed' : 'pointer', 
+                        boxShadow: isDownloadingAll ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.2)',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    {isDownloadingAll ? (
+                        <>
+                            <div className="spinner-mini" style={{
+                                width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)',
+                                borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite'
+                            }} />
+                            Downloading...
+                        </>
+                    ) : (
+                        <>
+                            <Download size={16} />
+                            Download All
+                        </>
+                    )}
                 </button>
             </header>
 
