@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
@@ -73,7 +73,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     }
   };
 
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const [sessionsRes, filterSetting, videoSetting, testModeSetting, countdownSetting, logsRes] = await Promise.all([
@@ -102,29 +102,39 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (authed) {
       loadData();
       
-      const channel = supabase
-        .channel('admin-updates')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => {
+      const sessionChannel = supabase
+        .channel('admin-sessions-monitor')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sessions' }, () => {
           loadData(true);
         })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions' }, () => {
+          loadData(true);
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sessions' }, () => {
+          loadData(true);
+        })
+        .subscribe();
+
+      const logsChannel = supabase
+        .channel('admin-logs-monitor')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_logs' }, () => {
-          // Refresh logs if someone else is doing things
           supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(10)
             .then(res => res.data && setLogs(res.data as AdminLog[]));
         })
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(sessionChannel);
+        supabase.removeChannel(logsChannel);
       };
     }
-  }, [authed]);
+  }, [authed, loadData]);
 
   const lastActionRef = useRef<string>('');
 

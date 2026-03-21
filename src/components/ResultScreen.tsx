@@ -68,8 +68,8 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     const w = 860, h = 606;
     const slotW = 402, slotH = 275;
     const coords = [
-      { x: 21, y: 28 }, { x: 437, y: 28 },
-      { x: 21, y: 331 }, { x: 437, y: 331 },
+      { x: 21, y: 21 }, { x: 437, y: 21 },
+      { x: 21, y: 310 }, { x: 437, y: 310 },
     ];
     const frameImg = await loadImage(frameUrl);
 
@@ -151,8 +151,8 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       const slotW = 1160, slotH = 794;
       const coords = [
-        { x: 60, y: 80 }, { x: 1260, y: 80 },
-        { x: 60, y: 954 }, { x: 1260, y: 954 }
+        { x: 60, y: 60 }, { x: 1260, y: 60 },
+        { x: 60, y: 894 }, { x: 1260, y: 894 }
       ];
 
       const photoImgs = await Promise.all(photos.map(loadImage));
@@ -167,7 +167,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       ctx.drawImage(frameImg, 0, 0, 2480, 1748);
 
       const finalPhotoBlob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92)
+        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.95)
       );
 
       setResultImg(URL.createObjectURL(finalPhotoBlob));

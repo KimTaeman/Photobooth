@@ -277,6 +277,11 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         playShutter(); triggerFlash();
         
         if (shotRetakeCount >= 2) {
+          // No more retakes: show final photo for a few seconds before moving on
+          setPreviewPhoto(photoUrl);
+          setStatus('Max retakes reached - Keeping this shot!');
+          await new Promise(r => setTimeout(r, 1000));
+          setPreviewPhoto(null);
           decision = 'keep';
         } else {
           setPreviewPhoto(photoUrl);
@@ -320,21 +325,56 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         </div>
       </div>
       <div className="camera-viewport">
-        <div id="video-wrapper">
-          {countdown && <div id="countdown-overlay" style={{ display: 'flex' }}>{countdown}</div>}
-          <div id="flash-overlay" className={flash ? 'ripple' : ''} />
+        <div id="video-wrapper" style={{ 
+          aspectRatio: '2480 / 1748', 
+          width: '90%', 
+          maxWidth: '1000px',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '24px',
+          border: '12px solid var(--white)',
+          background: '#000'
+        }}>
           <video 
             ref={videoRef} 
             autoPlay 
             playsInline 
             muted 
             style={{ 
+              position: 'absolute',
+              top: '11.44%', // (1748 - 1230) / 2 / 1748 * 100 = 14.8% ? No, let's use exact hole coordinates if possible or center it.
+              // Center hole: (1748 - 1230) / 2 = 259px. 259 / 1748 = 14.8%
+              // Center hole width: (2480 - 1800) / 2 = 340px. 340 / 2480 = 13.7%
+              top: '14.8%',
+              left: '13.7%',
+              width: '72.6%', // 1800 / 2480 = 72.58%
+              height: '70.3%', // 1230 / 1748 = 70.36%
+              objectFit: 'cover',
+              transform: 'scaleX(-1)',
+              zIndex: 5,
               filter: activeFilter === 'lut' 
                 ? 'contrast(1.1) saturate(1.1) sepia(0.05)' 
                 : activeFilter 
             }}
           />
-          {selectedFrame && <img id="frame-overlay" src="/frame_camera.png" style={{ display: 'block' }} alt="Frame Overlay" />}
+          {selectedFrame && (
+            <img 
+              id="frame-overlay" 
+              src="/frame_camera.png" 
+              style={{ 
+                display: 'block', 
+                position: 'absolute', 
+                inset: 0, 
+                width: '100%', 
+                height: '100%', 
+                zIndex: 10,
+                pointerEvents: 'none'
+              }} 
+              alt="Frame Overlay" 
+            />
+          )}
+          {countdown && <div id="countdown-overlay" style={{ display: 'flex', zIndex: 20 }}>{countdown}</div>}
+          <div id="flash-overlay" className={flash ? 'ripple' : ''} style={{ zIndex: 30 }} />
         </div>
       </div>
       <div className="preview-strip">
