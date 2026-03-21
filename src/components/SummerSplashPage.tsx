@@ -17,6 +17,7 @@ const SummerSplashPage: React.FC = () => {
     const [finalImgError, setFinalImgError] = useState(false);
     const [loadedImgs, setLoadedImgs] = useState<Set<string>>(new Set());
     const markLoaded = (key: string) => setLoadedImgs(prev => new Set(prev).add(key));
+    const videoRef = useRef<HTMLVideoElement>(null);
     const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
     const getCloudinaryUrl = (suffix: string, isVideo = false, download = false) => {
