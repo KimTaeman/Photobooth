@@ -342,7 +342,6 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
             muted 
             style={{ 
               position: 'absolute',
-              top: '11.44%', // (1748 - 1230) / 2 / 1748 * 100 = 14.8% ? No, let's use exact hole coordinates if possible or center it.
               // Center hole: (1748 - 1230) / 2 = 259px. 259 / 1748 = 14.8%
               // Center hole width: (2480 - 1800) / 2 = 340px. 340 / 2480 = 13.7%
               top: '14.8%',

@@ -136,8 +136,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     }
   }, [authed, loadData]);
 
-  const lastActionRef = useRef<string>('');
-
   const saveSettingsToDB = async (updates: Record<string, string | boolean | number>, customMsg?: string) => {
     setIsSaving(true);
     try {
