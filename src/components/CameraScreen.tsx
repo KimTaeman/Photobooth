@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, RotateCcw, Check } from 'lucide-react';
 import type { RemoteConfig } from '../hooks/useSupabase';
+import { useLUT } from '../hooks/useLUT';
 
 const audioCtx = { current: null as AudioContext | null };
 const getAudioCtx = () => {
@@ -49,6 +50,8 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [previewCountdown, setPreviewCountdown] = useState(3);
   const [retakeCount, setRetakeCount] = useState(0);
+
+  const { loadLUT, applyLUT } = useLUT();
 
   const testMode = config?.testMode ?? false;
   const enableVideo = config?.enableVideo ?? true;
@@ -151,32 +154,58 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   };
 
-  const capturePhoto = (): Promise<string> => {
-    return new Promise(resolve => {
-      const v = videoRef.current!;
-      const canvas = document.createElement('canvas');
-      canvas.width = 1277; canvas.height = 685;
-      const ctx = canvas.getContext('2d')!;
+  const capturePhoto = async (): Promise<string> => {
+    const v = videoRef.current!;
+    const canvas = document.createElement('canvas');
+    canvas.width = 1160; canvas.height = 794;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    
+    // Apply standard filter if not LUT
+    if (activeFilter !== 'lut' && activeFilter !== 'none') {
       ctx.filter = activeFilter;
-      ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
-      drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      canvas.toBlob(blob => resolve(URL.createObjectURL(blob!)), 'image/jpeg', 0.92);
+    }
+
+    // Draw mirrored camera
+    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
+    drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    
+    // Bake LUT ONLY if activeFilter is 'lut'
+    if (activeFilter === 'lut') {
+      const lutData = await loadLUT('/filter.png');
+      if (lutData) {
+        applyLUT(ctx, lutData, canvas.width, canvas.height);
+      }
+    }
+    
+    return new Promise(resolve => {
+      canvas.toBlob(blob => resolve(URL.createObjectURL(blob!)), 'image/jpeg', 0.95);
     });
   };
 
   const captureFrameBurst = async (count = 5, intervalMs = 80): Promise<string[]> => {
     const frames: string[] = [];
+    const lutData = activeFilter === 'lut' ? await loadLUT('/filter.png') : null;
+    
     for (let i = 0; i < count; i++) {
       const url = await new Promise<string>(resolve => {
         const v = videoRef.current!;
         const canvas = document.createElement('canvas');
-        canvas.width = 1277; canvas.height = 685;
-        const ctx = canvas.getContext('2d')!;
-        ctx.filter = activeFilter;
+        canvas.width = 1160; canvas.height = 794;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+        
+        if (activeFilter !== 'lut' && activeFilter !== 'none') {
+          ctx.filter = activeFilter;
+        }
+
         ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
         drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
+        
+        if (activeFilter === 'lut' && lutData) {
+          applyLUT(ctx, lutData, canvas.width, canvas.height);
+        }
+        
         canvas.toBlob(blob => resolve(URL.createObjectURL(blob!)), 'image/jpeg', 0.7);
       });
       frames.push(url);
@@ -294,14 +323,24 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
         <div id="video-wrapper">
           {countdown && <div id="countdown-overlay" style={{ display: 'flex' }}>{countdown}</div>}
           <div id="flash-overlay" className={flash ? 'ripple' : ''} />
-          <video ref={videoRef} autoPlay playsInline muted />
-          {selectedFrame && <img id="frame-overlay" src={selectedFrame} style={{ display: 'block' }} alt="Frame Overlay" />}
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            style={{ 
+              filter: activeFilter === 'lut' 
+                ? 'contrast(1.1) saturate(1.1) sepia(0.05)' 
+                : activeFilter 
+            }}
+          />
+          {selectedFrame && <img id="frame-overlay" src="/frame_camera.png" style={{ display: 'block' }} alt="Frame Overlay" />}
         </div>
       </div>
       <div className="preview-strip">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className={`preview-slot${capturedPhotos[i] ? ' filled' : ''}${shotNum === i + 1 && isProcessing && !capturedPhotos[i] ? ' current' : ''}`}>
-            {capturedPhotos[i] && <img src={capturedPhotos[i]} alt={`Shot ${i + 1}`} style={{ filter: activeFilter }} />}
+            {capturedPhotos[i] && <img src={capturedPhotos[i]} alt={`Shot ${i + 1}`} />}
           </div>
         ))}
       </div>
@@ -316,7 +355,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       </div>
       {previewPhoto && (
         <div className="retake-overlay">
-          <img src={previewPhoto} className="retake-preview" alt="Preview" style={{ filter: activeFilter }} />
+          <img src={previewPhoto} className="retake-preview" alt="Preview" />
           <div className="retake-actions">
             <button 
               className="btn btn-outline retake-btn" 

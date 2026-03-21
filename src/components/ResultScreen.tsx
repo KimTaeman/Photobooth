@@ -64,12 +64,12 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
   const generateGif = async (photoUrls: string[], frameUrl: string, bursts?: string[][]): Promise<Blob> => {
     const { createGIF } = await import('gifshot');
-    // Strip layout: 2752x1536 scaled down to ~860x480 for GIF
-    const w = 860, h = 480;
-    const slotW = 399, slotH = 214;
+    // Strip layout: A5 landscape (2480x1748) scaled down to 860x606 for GIF
+    const w = 860, h = 606;
+    const slotW = 402, slotH = 275;
     const coords = [
-      { x: 21, y: 18 }, { x: 439, y: 18 },
-      { x: 21, y: 248 }, { x: 439, y: 248 },
+      { x: 21, y: 28 }, { x: 437, y: 28 },
+      { x: 21, y: 331 }, { x: 437, y: 331 },
     ];
     const frameImg = await loadImage(frameUrl);
 
@@ -144,15 +144,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       // 1. Create Final Photo Strip
       const canvas = document.createElement('canvas');
-      canvas.width = 2752; canvas.height = 1536;
+      canvas.width = 2480; canvas.height = 1748;
       const ctx = canvas.getContext('2d')!;
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 2752, 1536);
+      ctx.fillRect(0, 0, 2480, 1748);
 
-      const slotW = 1277, slotH = 685;
+      const slotW = 1160, slotH = 794;
       const coords = [
-        { x: 69, y: 58 }, { x: 1407, y: 58 },
-        { x: 69, y: 794 }, { x: 1407, y: 794 }
+        { x: 60, y: 80 }, { x: 1260, y: 80 },
+        { x: 60, y: 954 }, { x: 1260, y: 954 }
       ];
 
       const photoImgs = await Promise.all(photos.map(loadImage));
@@ -164,7 +164,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       // Draw frame without filter
       ctx.filter = 'none';
       const frameImg = await loadImage(selectedFrame!);
-      ctx.drawImage(frameImg, 0, 0, 2752, 1536);
+      ctx.drawImage(frameImg, 0, 0, 2480, 1748);
 
       const finalPhotoBlob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92)

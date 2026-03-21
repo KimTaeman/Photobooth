@@ -20,14 +20,9 @@ interface AdminLog {
 }
 
 const AVAILABLE_FILTERS = [
-  { id: 'none', label: 'None (Natural)', preview: 'none' },
+  { id: 'none', label: 'Natural', preview: 'none' },
   { id: 'grayscale(100%)', label: 'B&W Classic', preview: 'grayscale(100%)' },
-  { id: 'sepia(100%)', label: 'Vintage Sepia', preview: 'sepia(100%)' },
-  { id: 'contrast(120%) brightness(110%)', label: 'Vivid Pop', preview: 'contrast(120%) brightness(110%)' },
-  { id: 'saturate(150%)', label: 'High Saturation', preview: 'saturate(150%)' },
-  { id: 'contrast(150%) brightness(80%) grayscale(100%)', label: 'Noir', preview: 'contrast(150%) brightness(80%) grayscale(100%)' },
-  { id: 'hue-rotate(180deg)', label: 'Psychedelic', preview: 'hue-rotate(180deg)' },
-  { id: 'blur(2px)', label: 'Soft Focus', preview: 'blur(2px)' },
+  { id: 'lut', label: 'Adobe Lightroom', preview: 'contrast(1.1) saturate(1.1) sepia(0.05)' },
 ];
 
 interface AdminPageProps {
