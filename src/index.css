@@ -112,7 +112,7 @@ h1, h2, h3, .shot-label, .frame-label {
     padding: 48px 44px; text-align: center; min-width: 380px;
 }
 .lock-splash-icon {
-    width: 80px; height: 80px; margin: 0 auto 20px;
+    width: 180px; height: 180px; margin: 0 auto 20px;
 }
 .lock-card h1 { font-size: 1.8rem; margin-bottom: 6px; color: var(--blue); }
 .lock-card p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
@@ -294,7 +294,7 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 /* ---- Result Screen ---- */
 #screen-result {
     background: var(--bg-gradient);
-    padding: 80px 20px; 
+    padding: 40px 20px; 
     overflow-y: auto;
     display: none; /* Default to hidden */
     flex-direction: column;

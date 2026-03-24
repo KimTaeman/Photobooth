@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LockOpen, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PASSWORD_HASH, sha256 } from '../hooks/useSupabase';
+import logo from '../assets/logo.png';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -49,19 +50,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isActive }) => {
         <Settings size={28} />
       </Link>
       <div className="lock-card glass-card">
-        <svg className="lock-splash-icon" viewBox="0 0 100 100" fill="none">
-          <circle cx="50" cy="50" r="24" fill="#BAE6FD" />
-          <ellipse cx="30" cy="28" rx="9" ry="14" transform="rotate(-30 30 28)" fill="#BAE6FD" />
-          <ellipse cx="72" cy="24" rx="7" ry="12" transform="rotate(25 72 24)" fill="#BAE6FD" />
-          <ellipse cx="76" cy="68" rx="8" ry="13" transform="rotate(35 76 68)" fill="#BAE6FD" />
-          <ellipse cx="24" cy="72" rx="7" ry="11" transform="rotate(-25 24 72)" fill="#BAE6FD" />
-          <circle cx="50" cy="12" r="6" fill="#60A5FA" />
-          <circle cx="12" cy="50" r="5" fill="#60A5FA" />
-          <circle cx="88" cy="44" r="5" fill="#60A5FA" />
-          <circle cx="50" cy="88" r="5" fill="#60A5FA" />
-          <circle cx="50" cy="50" r="12" fill="rgba(255,255,255,0.4)" />
-        </svg>
-        <h1>Photobooth</h1>
+        <img src={logo} alt="Tatt n' Snap" className="lock-splash-icon" style={{ objectFit: 'contain', borderRadius: 0, background: 'none' }} />
         <p>Enter password to unlock the booth</p>
         <input
           type="password"

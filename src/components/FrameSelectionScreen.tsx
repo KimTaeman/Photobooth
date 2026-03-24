@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Palette, Camera, Sun } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 interface FrameSelectionScreenProps {
   onStartSession: (frame: string) => void;
@@ -46,6 +47,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   return (
     <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`}>
       <div className="frames-header">
+        <img src={logo} alt="Tatt n' Snap" style={{ height: '70px', objectFit: 'contain', marginBottom: '4px' }} />
         <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Palette size={30} /> Choose Your Frame</h1>
         <p>Pick a frame for your photo strip!</p>
       </div>

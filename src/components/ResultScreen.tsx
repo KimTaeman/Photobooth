@@ -4,6 +4,7 @@ import { Sparkles, Download, Film, RotateCcw, QrCode, WifiOff } from 'lucide-rea
 import { uploadToCloudinary } from '../hooks/useCloudinary';
 import { logSession } from '../hooks/useSupabase';
 import { useUploadQueue } from '../hooks/useUploadQueue';
+import logo from '../assets/logo.png';
 
 interface ResultScreenProps {
   isActive: boolean;
@@ -299,6 +300,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     <div id="screen-result" className={`screen ${isActive ? 'active' : ''}`}>
       <div className="result-content">
         <div className="result-header">
+          <img src={logo} alt="Tatt n' Snap" style={{ height: '70px', objectFit: 'contain', marginTop: '-12px', marginBottom: '2px' }} />
           <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}><Sparkles size={32} /> Your Photobooth Memories!</h1>
           <p>Scan the QR code to access all your photos and videos</p>
           
