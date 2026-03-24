@@ -211,7 +211,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       const field = key.replace('layout_', '');
       const nextLayout = { ...layout2x2, [field as keyof typeof layout2x2]: parseInt(value) };
       setLayout2x2(nextLayout);
-      // No auto-save for layout fields - use explicit Save button
+      // Sync locally so switching frames doesn't lose unsaved changes
+      if (selectedPreviewFrame) {
+        setFrameLayouts(prev => ({ ...prev, [selectedPreviewFrame]: nextLayout }));
+      }
       return;
     }
 
@@ -265,6 +268,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const handleResetLayout = () => {
     if (window.confirm('Reset this frame layout to default values?')) {
       setLayout2x2(DEFAULT_LAYOUT);
+      if (selectedPreviewFrame) {
+        setFrameLayouts(prev => ({ ...prev, [selectedPreviewFrame]: DEFAULT_LAYOUT }));
+      }
       showNotification('Layout values reset to defaults');
     }
   };
