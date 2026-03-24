@@ -25,6 +25,8 @@ const AVAILABLE_FILTERS = [
   { id: 'lut', label: 'Adobe Lightroom', preview: 'contrast(1.1) saturate(1.1) sepia(0.05)' },
 ];
 
+const DEFAULT_LAYOUT = { margin: 210, gutterX: 70, gutterY: 73, slotW: 995, slotH: 681 };
+
 interface AdminPageProps {
   authed: boolean;
   setAuthed: (val: boolean) => void;
@@ -39,6 +41,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [enableVideo, setEnableVideo] = useState(true);
   const [testMode, setTestMode] = useState(false);
   const [countdownDuration, setCountdownDuration] = useState(10);
+  const [layout2x2, setLayout2x2] = useState(DEFAULT_LAYOUT);
+  const [frameLayouts, setFrameLayouts] = useState<Record<string, typeof layout2x2>>({});
+  const [selectedPreviewFrame, setSelectedPreviewFrame] = useState<string | null>(null);
+  const [availableFrames, setAvailableFrames] = useState<string[]>(['/frame1.png', '/frame2.png', '/frame3.png']);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -76,12 +82,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sessionsRes, filterSetting, videoSetting, testModeSetting, countdownSetting, logsRes] = await Promise.all([
+      const [sessionsRes, filterSetting, videoSetting, testModeSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
         getSetting('active_filter', 'none'),
         getSetting('enable_video', 'true'),
         getSetting('test_mode', 'false'),
         getSetting('countdown_duration', '10'),
+        getSetting('layout_2x2', JSON.stringify(DEFAULT_LAYOUT)),
+        getSetting('available_frames', JSON.stringify(['/frame1.png', '/frame2.png', '/frame3.png'])),
+        getSetting('frame_layouts', '{}'),
         supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(10)
       ]);
       
@@ -93,6 +102,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setEnableVideo(videoSetting === 'true');
       setTestMode(testModeSetting === 'true');
       setCountdownDuration(parseInt(countdownSetting));
+      setLayout2x2(JSON.parse(layoutSetting));
+      const frames = JSON.parse(framesSetting);
+      setAvailableFrames(frames);
+      const layouts = JSON.parse(frameLayoutsSetting);
+      setFrameLayouts(layouts);
+      setSelectedPreviewFrame(frames[0] || null);
+      if (frames[0] && layouts[frames[0]]) {
+        setLayout2x2(layouts[frames[0]]);
+      }
       setLogs((logsRes.data as AdminLog[]) || []);
       
       // Mark first load as complete AFTER data is in state
@@ -189,13 +207,65 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       msg = `Countdown set to ${value}s`;
     }
 
+    if (key.startsWith('layout_')) {
+      const field = key.replace('layout_', '');
+      const nextLayout = { ...layout2x2, [field as keyof typeof layout2x2]: parseInt(value) };
+      setLayout2x2(nextLayout);
+      // No auto-save for layout fields - use explicit Save button
+      return;
+    }
+
     if (!firstLoadRef.current) {
       triggerAutoSave({
         active_filter: nextActiveFilter,
         enable_video: nextEnableVideo,
         test_mode: nextTestMode,
-        countdown_duration: nextCountdownDuration
+        countdown_duration: nextCountdownDuration,
+        // We still include layout_2x2 in the global auto-save to keep it in sync with other settings
+        layout_2x2: JSON.stringify(layout2x2)
       }, msg);
+    }
+  };
+
+  const handleSaveFrameLayout = async () => {
+    if (!selectedPreviewFrame) return;
+    setIsSaving(true);
+    try {
+      const nextFrameLayouts = {
+        ...frameLayouts,
+        [selectedPreviewFrame]: layout2x2
+      };
+      setFrameLayouts(nextFrameLayouts);
+      await Promise.all([
+        updateSetting('frame_layouts', JSON.stringify(nextFrameLayouts)),
+        updateSetting('layout_2x2', JSON.stringify(layout2x2))
+      ]);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      showNotification(`Layout saved for ${selectedPreviewFrame.split('/').pop()}`);
+      logAdminAction(`Saved layout for frame: ${selectedPreviewFrame}`);
+    } catch (err) {
+      console.error('Failed to save frame layout:', err);
+      showNotification('Error saving layout', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSelectPreviewFrame = (frame: string) => {
+    setSelectedPreviewFrame(frame);
+    if (frameLayouts[frame]) {
+      setLayout2x2(frameLayouts[frame]);
+    } else {
+      // Default layout if none exists for this frame
+      setLayout2x2(DEFAULT_LAYOUT);
+    }
+  };
+
+  const handleResetLayout = () => {
+    if (window.confirm('Reset this frame layout to default values?')) {
+      setLayout2x2(DEFAULT_LAYOUT);
+      showNotification('Layout values reset to defaults');
     }
   };
 
@@ -223,6 +293,98 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
 
   const getFullSizeUrl = (id: string) =>
     `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${id}_final.jpg`;
+
+  const MathInput = ({ label, value, onChange }: { label: string, value: number, onChange: (val: string) => void }) => {
+    const [displayValue, setDisplayValue] = useState(value.toString());
+
+    useEffect(() => {
+      setDisplayValue(value.toString());
+    }, [value]);
+
+    const evaluateAndCommit = () => {
+      try {
+        // eslint-disable-next-line no-new-func
+        const result = new Function(`return ${displayValue}`)();
+        if (typeof result === 'number' && !isNaN(result)) {
+          onChange(Math.round(result).toString());
+        } else {
+          setDisplayValue(value.toString());
+        }
+      } catch (err) {
+        setDisplayValue(value.toString());
+      }
+    };
+
+    return (
+      <div>
+        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '4px' }}>{label}</label>
+        <input 
+          type="text" 
+          value={displayValue}
+          onChange={(e) => setDisplayValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && evaluateAndCommit()}
+          onBlur={evaluateAndCommit}
+          style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+        />
+      </div>
+    );
+  };
+
+  const LayoutPreview = () => {
+    const scale = 0.12; // Scale down for dashboard preview
+    const w = 2480 * scale;
+    const h = 1748 * scale;
+    const { margin, gutterX, gutterY, slotW, slotH } = layout2x2;
+
+    const slots = [
+      { x: margin * scale, y: margin * scale },
+      { x: (margin + slotW + gutterX) * scale, y: margin * scale },
+      { x: margin * scale, y: (margin + slotH + gutterY) * scale },
+      { x: (margin + slotW + gutterX) * scale, y: (margin + slotH + gutterY) * scale },
+    ];
+
+    return (
+      <div style={{ 
+        position: 'relative', 
+        width: `${w}px`, 
+        height: `${h}px`, 
+        background: '#e2e8f0', 
+        borderRadius: '8px', 
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        margin: '0 auto'
+      }}>
+        {/* Frame background example */}
+        {selectedPreviewFrame && (
+          <img 
+            src={selectedPreviewFrame} 
+            alt="Preview Frame" 
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} 
+          />
+        )}
+        {/* Photo placeholders (black holes) */}
+        {slots.map((s, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            left: `${s.x}px`,
+            top: `${s.y}px`,
+            width: `${slotW * scale}px`,
+            height: `${slotH * scale}px`,
+            background: '#000',
+            zIndex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#333',
+            fontSize: '10px',
+            fontWeight: 800
+          }}>
+            {i + 1}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const handleAdminPrint = (id: string) => {
     const printWindow = window.open('', '_blank');
@@ -433,6 +595,86 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                           onChange={(e) => handleUpdateSetting('countdown_duration', Math.min(120, Math.max(1, parseInt(e.target.value) || 1)))}
                           style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #E2E8F0', fontSize: '0.9rem', width: '100%', outline: 'none', boxSizing: 'border-box' }}
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, margin: 0, fontSize: '1rem' }}>
+                        <Settings size={18} color="#3B82F6" /> 2x2 Result Layout
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={handleResetLayout}
+                          style={{ 
+                            padding: '6px 16px', borderRadius: '50px', border: '2px solid #E2E8F0', 
+                            background: 'white', color: '#64748B', 
+                            fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.8rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Reset
+                        </button>
+                        <button 
+                          onClick={handleSaveFrameLayout}
+                          disabled={isSaving || !selectedPreviewFrame}
+                          style={{ 
+                            padding: '6px 16px', borderRadius: '50px', border: 'none', 
+                            background: '#3B82F6', color: 'white', 
+                            fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.8rem',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                          }}
+                        >
+                          <Save size={14} /> Save
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Select Frame to Adjust:</label>
+                      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+                        {availableFrames.map(f => (
+                          <div 
+                            key={f} 
+                            onClick={() => handleSelectPreviewFrame(f)}
+                            style={{ 
+                              width: '60px', height: '42px', borderRadius: '6px', overflow: 'hidden', 
+                              border: `2px solid ${selectedPreviewFrame === f ? '#3B82F6' : '#E2E8F0'}`,
+                              cursor: 'pointer', flexShrink: 0
+                            }}
+                          >
+                            <img src={f} alt="frame" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                      <div style={{ flex: '1', minWidth: '200px' }}>
+                        <p style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '12px' }}>Canvas: 2480x1748 px</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          {[
+                            { label: 'Margin', key: 'layout_margin', val: layout2x2.margin },
+                            { label: 'Gutter X', key: 'layout_gutterX', val: layout2x2.gutterX },
+                            { label: 'Gutter Y', key: 'layout_gutterY', val: layout2x2.gutterY },
+                            { label: 'Slot W', key: 'layout_slotW', val: layout2x2.slotW },
+                            { label: 'Slot H', key: 'layout_slotH', val: layout2x2.slotH },
+                          ].map(item => (
+                            <MathInput 
+                              key={item.key}
+                              label={item.label}
+                              value={item.val}
+                              onChange={(val) => handleUpdateSetting(item.key, val)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div style={{ textAlign: 'center' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Visual Preview</label>
+                        <LayoutPreview />
+                        <p style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '8px', fontStyle: 'italic' }}>Black areas are where photos will be drawn.</p>
                       </div>
                     </div>
                   </div>

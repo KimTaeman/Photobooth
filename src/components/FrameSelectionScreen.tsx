@@ -14,7 +14,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   isActive, 
   selectedFrame, 
   onSelectFrame,
-  availableFrames = ['/frame1.png', '/frame2.png']
+  availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png']
 }) => {
   const [isIdle, setIsIdle] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

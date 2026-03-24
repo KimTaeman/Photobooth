@@ -24,12 +24,15 @@ export interface QueuedUpload {
 const QUEUE_DIR = 'upload_queue';
 const METADATA_FILE = 'queue_metadata.json';
 
+const isTauri = () => !!(window as any).__TAURI_INTERNALS__;
+
 export function useUploadQueue() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
   // Initialize the queue directory
   const initQueue = useCallback(async () => {
+    if (!isTauri()) return;
     try {
       const queueExists = await exists(QUEUE_DIR, { baseDir: BaseDirectory.AppCache });
       if (!queueExists) {
@@ -42,6 +45,7 @@ export function useUploadQueue() {
   }, []);
 
   const updatePendingCount = useCallback(async () => {
+    if (!isTauri()) return;
     try {
       const metadata = await getMetadata();
       setPendingCount(metadata.length);
@@ -51,6 +55,7 @@ export function useUploadQueue() {
   }, []);
 
   const getMetadata = async (): Promise<QueuedUpload[]> => {
+    if (!isTauri()) return [];
     try {
       const metadataExists = await exists(METADATA_FILE, { baseDir: BaseDirectory.AppCache });
       if (!metadataExists) return [];
@@ -62,6 +67,7 @@ export function useUploadQueue() {
   };
 
   const saveMetadata = async (metadata: QueuedUpload[]) => {
+    if (!isTauri()) return;
     const content = new TextEncoder().encode(JSON.stringify(metadata));
     await writeFile(METADATA_FILE, content, { baseDir: BaseDirectory.AppCache });
   };
@@ -73,6 +79,10 @@ export function useUploadQueue() {
     sessionId: string,
     metadata?: any
   ) => {
+    if (!isTauri()) {
+        console.warn('Local queue skipped: Not in Tauri environment');
+        return;
+    }
     try {
       const id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const extension = resourceType === 'video' ? 'webm' : (resourceType === 'image' ? 'jpg' : 'bin');
@@ -104,7 +114,7 @@ export function useUploadQueue() {
   };
 
   const processQueue = useCallback(async () => {
-    if (isProcessing || !navigator.onLine) return;
+    if (!isTauri() || isProcessing || !navigator.onLine) return;
     
     const metadata = await getMetadata();
     if (metadata.length === 0) return;

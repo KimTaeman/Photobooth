@@ -12,6 +12,7 @@ interface ResultScreenProps {
   videoBlob: Blob | null;
   selectedFrame: string | null;
   onNewSession: () => void;
+  config: import('../hooks/useSupabase').RemoteConfig | null;
 }
 
 const ResultScreen: React.FC<ResultScreenProps> = ({
@@ -21,6 +22,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   videoBlob,
   selectedFrame,
   onNewSession,
+  config,
 }) => {
   const [resultImg, setResultImg] = useState<string | null>(null);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
@@ -66,10 +68,20 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     const { createGIF } = await import('gifshot');
     // Strip layout: A5 landscape (2480x1748) scaled down to 860x606 for GIF
     const w = 860, h = 606;
-    const slotW = 402, slotH = 275;
+    const ratio = w / 2480;
+    
+    const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) || config?.layout2x2 || { margin: 60, gutterX: 40, gutterY: 40, slotW: 1160, slotH: 794 };
+    const slotW = layout.slotW * ratio;
+    const slotH = layout.slotH * ratio;
+    const margin = layout.margin * ratio;
+    const gX = layout.gutterX * ratio;
+    const gY = layout.gutterY * ratio;
+
     const coords = [
-      { x: 21, y: 21 }, { x: 437, y: 21 },
-      { x: 21, y: 310 }, { x: 437, y: 310 },
+      { x: margin, y: margin }, 
+      { x: margin + slotW + gX, y: margin },
+      { x: margin, y: margin + slotH + gY }, 
+      { x: margin + slotW + gX, y: margin + slotH + gY },
     ];
     const frameImg = await loadImage(frameUrl);
 
@@ -86,6 +98,11 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         const ctx = c.getContext('2d')!;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
+        
+        // Draw frame first
+        ctx.filter = 'none';
+        ctx.drawImage(frameImg, 0, 0, w, h);
+
         for (let si = 0; si < 4; si++) {
           const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
           if (img) {
@@ -93,8 +110,6 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
           }
         }
-        ctx.filter = 'none';
-        ctx.drawImage(frameImg, 0, 0, w, h);
         frames.push(c.toDataURL('image/jpeg', 0.82));
       }
       // Hold last frame
@@ -109,12 +124,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         const ctx = c.getContext('2d')!;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
+
+        // Draw frame first
+        ctx.filter = 'none';
+        ctx.drawImage(frameImg, 0, 0, w, h);
+
         for (let j = 0; j <= i; j++) {
           ctx.filter = 'none';
           drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
         }
-        ctx.filter = 'none';
-        ctx.drawImage(frameImg, 0, 0, w, h);
         frames.push(c.toDataURL('image/jpeg', 0.85));
       }
       frames.push(frames[3], frames[3]);
@@ -149,22 +167,31 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 2480, 1748);
 
-      const slotW = 1160, slotH = 794;
+      // Draw frame first as background
+      ctx.save();
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1.0;
+      const frameImg = await loadImage(selectedFrame!);
+      ctx.drawImage(frameImg, 0, 0, 2480, 1748);
+      ctx.restore();
+
+      const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) || config?.layout2x2 || { margin: 60, gutterX: 40, gutterY: 40, slotW: 1160, slotH: 794 };
+      const { margin, gutterX, gutterY, slotW, slotH } = layout;
       const coords = [
-        { x: 60, y: 60 }, { x: 1260, y: 60 },
-        { x: 60, y: 894 }, { x: 1260, y: 894 }
+        { x: margin, y: margin }, 
+        { x: margin + slotW + gutterX, y: margin },
+        { x: margin, y: margin + slotH + gutterY }, 
+        { x: margin + slotW + gutterX, y: margin + slotH + gutterY }
       ];
 
       const photoImgs = await Promise.all(photos.map(loadImage));
       photoImgs.forEach((img, i) => {
+        ctx.save();
         ctx.filter = 'none';
+        ctx.globalAlpha = 1.0;
         drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH);
+        ctx.restore();
       });
-
-      // Draw frame without filter
-      ctx.filter = 'none';
-      const frameImg = await loadImage(selectedFrame!);
-      ctx.drawImage(frameImg, 0, 0, 2480, 1748);
 
       const finalPhotoBlob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.95)

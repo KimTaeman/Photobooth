@@ -56,6 +56,16 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   const testMode = config?.testMode ?? false;
   const enableVideo = config?.enableVideo ?? true;
   const activeFilter = config?.activeFilter ?? 'none';
+  const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) || config?.layout2x2 || { margin: 60, gutterX: 40, gutterY: 40, slotW: 1160, slotH: 794 };
+
+  const { margin, gutterX, gutterY, slotW, slotH } = layout;
+  const slots = [
+    { x: margin, y: margin },
+    { x: margin + slotW + gutterX, y: margin },
+    { x: margin, y: margin + slotH + gutterY },
+    { x: margin + slotW + gutterX, y: margin + slotH + gutterY }
+  ];
+  const currentSlot = slots[shotNum - 1] || slots[0];
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
@@ -66,16 +76,41 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
 
   const startCamera = async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: false,
-      });
+      // Try high resolution first
+      let s: MediaStream;
+      try {
+        s = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' },
+          audio: false,
+        });
+      } catch (e) {
+        // Fallback to standard 720p
+        try {
+          s = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            audio: false,
+          });
+        } catch (e2) {
+          // Absolute fallback
+          s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+      }
+      
       setStream(s);
       if (videoRef.current) {
         videoRef.current.srcObject = s;
         videoRef.current.play().catch(e => console.error("Error playing video:", e));
       }
-    } catch (err) { alert('Camera error: ' + (err as Error).message); }
+    } catch (err) { 
+      const error = err as Error;
+      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        alert('No camera device found. Please ensure your camera is connected and not being used by another app.');
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        alert('Camera access denied. Please allow camera permissions in your browser settings.');
+      } else {
+        alert('Camera error: ' + error.message);
+      }
+    }
   };
 
   const stopCamera = () => {
@@ -146,18 +181,29 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
   };
 
   const drawImageCover = (ctx: CanvasRenderingContext2D, img: HTMLVideoElement, x: number, y: number, w: number, h: number) => {
-    const imgRatio = img.videoWidth / img.videoHeight;
+    const vw = img.videoWidth || 1280;
+    const vh = img.videoHeight || 720;
+    const imgRatio = vw / vh;
     const targetRatio = w / h;
     let sw, sh, sx, sy;
-    if (imgRatio > targetRatio) { sh = img.videoHeight; sw = sh * targetRatio; sx = (img.videoWidth - sw) / 2; sy = 0; }
-    else { sw = img.videoWidth; sh = sw / targetRatio; sx = 0; sy = (img.videoHeight - sh) / 2; }
+    if (imgRatio > targetRatio) { 
+      sh = vh; 
+      sw = sh * targetRatio; 
+      sx = (vw - sw) / 2; 
+      sy = 0; 
+    } else { 
+      sw = vw; 
+      sh = sw / targetRatio; 
+      sx = 0; 
+      sy = (vh - sh) / 2; 
+    }
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   };
 
   const capturePhoto = async (): Promise<string> => {
     const v = videoRef.current!;
     const canvas = document.createElement('canvas');
-    canvas.width = 1160; canvas.height = 794;
+    canvas.width = slotW; canvas.height = slotH;
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     
     // Apply standard filter if not LUT
@@ -191,7 +237,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       const url = await new Promise<string>(resolve => {
         const v = videoRef.current!;
         const canvas = document.createElement('canvas');
-        canvas.width = 1160; canvas.height = 794;
+        canvas.width = slotW; canvas.height = slotH;
         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
         
         if (activeFilter !== 'lut' && activeFilter !== 'none') {
@@ -327,13 +373,15 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
       <div className="camera-viewport">
         <div id="video-wrapper" style={{ 
           aspectRatio: '2480 / 1748', 
-          width: '90%', 
-          maxWidth: '1000px',
+          width: '95%',
+          maxWidth: 'min(900px, calc((100vh - 380px) * 2480 / 1748))',
           position: 'relative',
           overflow: 'hidden',
           borderRadius: '24px',
           border: '12px solid var(--white)',
-          background: '#000'
+          background: '#000',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          margin: '0 auto'
         }}>
           <video 
             ref={videoRef} 
@@ -342,31 +390,30 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ isActive, selectedFrame, on
             muted 
             style={{ 
               position: 'absolute',
-              // Center hole: (1748 - 1230) / 2 = 259px. 259 / 1748 = 14.8%
-              // Center hole width: (2480 - 1800) / 2 = 340px. 340 / 2480 = 13.7%
-              top: '14.8%',
-              left: '13.7%',
-              width: '72.6%', // 1800 / 2480 = 72.58%
-              height: '70.3%', // 1230 / 1748 = 70.36%
+              top: '50%',
+              left: '50%',
+              width: '72.6%', // 1800 / 2480
+              height: '70.3%', // 1230 / 1748
               objectFit: 'cover',
-              transform: 'scaleX(-1)',
-              zIndex: 5,
+              transform: 'translate(-50%, -50%) scaleX(-1)',
+              zIndex: 10,
               filter: activeFilter === 'lut' 
                 ? 'contrast(1.1) saturate(1.1) sepia(0.05)' 
-                : activeFilter 
+                : activeFilter,
+              background: '#222' // Placeholder if video takes a second to load
             }}
           />
           {selectedFrame && (
             <img 
               id="frame-overlay" 
-              src="/frame_camera.png" 
+              src={selectedFrame} 
               style={{ 
                 display: 'block', 
                 position: 'absolute', 
                 inset: 0, 
                 width: '100%', 
                 height: '100%', 
-                zIndex: 10,
+                zIndex: 5,
                 pointerEvents: 'none'
               }} 
               alt="Frame Overlay" 

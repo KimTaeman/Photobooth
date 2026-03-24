@@ -46,10 +46,25 @@ export interface RemoteConfig {
     enableVideo: boolean;
     activeFilter: string;
     testMode: boolean;
+    layout2x2?: {
+        margin: number;
+        gutterX: number;
+        gutterY: number;
+        slotW: number;
+        slotH: number;
+    };
+    frameLayouts?: Record<string, {
+        margin: number;
+        gutterX: number;
+        gutterY: number;
+        slotW: number;
+        slotH: number;
+    }>;
 }
 
 export async function getAllSettings(): Promise<RemoteConfig> {
-    const defaultFrames = ['/frame1.png', '/frame2.png'];
+    const defaultFrames = ['/frame1.png', '/frame2.png', '/frame3.png'];
+    const defaultLayout = { margin: 210, gutterX: 70, gutterY: 73, slotW: 995, slotH: 681 };
     try {
         const { data, error } = await supabase.from('settings').select('*');
         if (error) throw error;
@@ -67,6 +82,8 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             enableVideo: settingsMap['enable_video'] === 'true',
             activeFilter: settingsMap['active_filter'] || 'none',
             testMode: settingsMap['test_mode'] === 'true',
+            layout2x2: settingsMap['layout_2x2'] ? JSON.parse(settingsMap['layout_2x2']) : defaultLayout,
+            frameLayouts: settingsMap['frame_layouts'] ? JSON.parse(settingsMap['frame_layouts']) : {},
         };
     } catch (err) {
         console.error('Error fetching all settings:', err);
@@ -78,6 +95,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             enableVideo: true,
             activeFilter: 'none',
             testMode: false,
+            layout2x2: defaultLayout,
         };
     }
 }

@@ -109,6 +109,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
         videoBlob={videoBlob}
         selectedFrame={selectedFrame}
         onNewSession={handleNewSession}
+        config={config}
       />
     </div>
   );
