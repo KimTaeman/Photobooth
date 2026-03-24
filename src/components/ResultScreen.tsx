@@ -391,8 +391,20 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
       {uploadStatus && (
         <div className="upload-overlay active">
-          <div className="spinner" />
-          <p>{uploadStatus}</p>
+          <img src={logo} alt="Tatt n' Snap" className="upload-overlay-logo" />
+          <div className="photo-developing-strip">
+            {(['-4deg', '2deg', '-2deg', '3deg'] as const).map((tilt, i) => (
+              <div key={i} className="polaroid-frame" style={{ '--tilt': tilt } as React.CSSProperties}>
+                <div className="polaroid-inner" />
+              </div>
+            ))}
+          </div>
+          <p className="upload-status-text">
+            <span className="upload-dot" />
+            <span className="upload-dot" />
+            <span className="upload-dot" />
+            &nbsp;{uploadStatus}
+          </p>
         </div>
       )}
     </div>

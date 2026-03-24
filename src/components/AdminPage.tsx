@@ -36,6 +36,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionSearch, setSessionSearch] = useState('');
+  const [sessionTypeFilter, setSessionTypeFilter] = useState<'all' | 'photo' | 'video'>('all');
+  const [sessionPage, setSessionPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('none');
   const [enableVideo, setEnableVideo] = useState(true);
@@ -309,6 +312,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       showNotification('Error resetting sessions', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    if (!window.confirm('Delete this session record? Photos in Cloudinary will NOT be deleted.')) return;
+    try {
+      const { error } = await supabase.from('sessions').delete().eq('id', id);
+      if (error) throw error;
+      setSessions(prev => prev.filter(s => s.id !== id));
+      logAdminAction(`Deleted session: ${id}`);
+      showNotification('Session deleted', 'info');
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+      showNotification('Error deleting session', 'error');
     }
   };
 
@@ -751,34 +768,80 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
             </div>
 
             {/* Recent gallery */}
-            {sessions.length > 0 && (
-              <div style={{ background: 'white', borderRadius: '20px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h2 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Camera size={20} color="#3B82F6" /> Recent Sessions
-                  </h2>
-                  <button onClick={() => loadData()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '50px', border: '2px solid #BAE6FD', background: 'transparent', color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                  </button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
-                  {sessions.slice(0, 24).map(s => (
-                    <div key={s.id} className="admin-session-card" style={{ borderRadius: '16px', overflow: 'hidden', background: '#F1F5F9', position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                      <img src={getThumbnail(s.id)} alt={s.id} style={{ width: '100%', aspectRatio: '3/2', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2'; }} />
-                      <div className="admin-session-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(30, 58, 95, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s', cursor: 'default' }}>
-                        <button onClick={() => handleAdminPrint(s.id)} title="Print" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Printer size={20} /></button>
-                        <button onClick={() => handleAdminDownload(s.id)} title="Download" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Download size={20} /></button>
-                        <a href={`https://photobooth-teal-pi.vercel.app/#/summer-splash?id=${s.id}${s.has_video ? '&v=1' : ''}&g=1`} target="_blank" rel="noopener noreferrer" title="View Page" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LayoutTemplate size={20} /></a>
-                      </div>
-                      <div style={{ padding: '8px 12px', fontSize: '0.75rem', color: '#1E3A5F', fontWeight: 700, background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span>{s.has_video ? '🎬 Video' : '📷 Photo'}</span>
-                      </div>
+            {sessions.length > 0 && (() => {
+              const SESSIONS_PER_PAGE = 12;
+              const filtered = sessions
+                .filter(s => sessionTypeFilter === 'all' || (sessionTypeFilter === 'video' ? s.has_video : !s.has_video))
+                .filter(s => !sessionSearch || s.id.toLowerCase().includes(sessionSearch.toLowerCase()) || new Date(s.created_at).toLocaleDateString().includes(sessionSearch));
+              const totalPages = Math.ceil(filtered.length / SESSIONS_PER_PAGE);
+              const paged = filtered.slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE);
+              return (
+                <div style={{ background: 'white', borderRadius: '20px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                  {/* Header row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Camera size={20} color="#3B82F6" /> Recent Sessions
+                      <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#64748B' }}>({filtered.length} of {sessions.length})</span>
+                    </h2>
+                    <button onClick={() => loadData()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '50px', border: '2px solid #BAE6FD', background: 'transparent', color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>
+                      <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                    </button>
+                  </div>
+
+                  {/* Search + filter row */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      placeholder="Search by ID or date…"
+                      value={sessionSearch}
+                      onChange={e => { setSessionSearch(e.target.value); setSessionPage(0); }}
+                      style={{ flex: '1 1 180px', padding: '8px 14px', borderRadius: '50px', border: '2px solid #E2E8F0', fontFamily: 'Fredoka, sans-serif', fontSize: '0.85rem', color: '#1E3A5F', outline: 'none' }}
+                    />
+                    {(['all', 'photo', 'video'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => { setSessionTypeFilter(f); setSessionPage(0); }}
+                        style={{ padding: '8px 16px', borderRadius: '50px', border: `2px solid ${sessionTypeFilter === f ? '#3B82F6' : '#E2E8F0'}`, background: sessionTypeFilter === f ? '#EFF6FF' : 'transparent', color: sessionTypeFilter === f ? '#3B82F6' : '#64748B', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'capitalize' }}
+                      >
+                        {f === 'all' ? 'All' : f === 'video' ? '🎬 Video' : '📷 Photo'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Session grid */}
+                  {paged.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+                      {paged.map(s => (
+                        <div key={s.id} className="admin-session-card" style={{ borderRadius: '16px', overflow: 'hidden', background: '#F1F5F9', position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                          <img src={getThumbnail(s.id)} alt={s.id} style={{ width: '100%', aspectRatio: '3/2', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2'; }} />
+                          <div className="admin-session-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(30, 58, 95, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s', cursor: 'default' }}>
+                            <button onClick={() => handleAdminPrint(s.id)} title="Print" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Printer size={20} /></button>
+                            <button onClick={() => handleAdminDownload(s.id)} title="Download" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Download size={20} /></button>
+                            <a href={`https://photobooth-teal-pi.vercel.app/#/summer-splash?id=${s.id}${s.has_video ? '&v=1' : ''}&g=1`} target="_blank" rel="noopener noreferrer" title="View Page" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LayoutTemplate size={20} /></a>
+                            <button onClick={() => handleDeleteSession(s.id)} title="Delete" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'white', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={20} /></button>
+                          </div>
+                          <div style={{ padding: '8px 12px', fontSize: '0.75rem', color: '#1E3A5F', fontWeight: 700, background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{s.has_video ? '🎬 Video' : '📷 Photo'}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8', fontFamily: 'Fredoka, sans-serif' }}>No sessions match your search.</div>
+                  )}
+
+                  {/* Pagination controls */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
+                      <button onClick={() => setSessionPage(p => Math.max(0, p - 1))} disabled={sessionPage === 0} style={{ padding: '8px 18px', borderRadius: '50px', border: '2px solid #E2E8F0', background: 'transparent', color: sessionPage === 0 ? '#CBD5E1' : '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: sessionPage === 0 ? 'default' : 'pointer', fontSize: '0.85rem' }}>← Prev</button>
+                      <span style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', fontSize: '0.9rem' }}>Page {sessionPage + 1} of {totalPages}</span>
+                      <button onClick={() => setSessionPage(p => Math.min(totalPages - 1, p + 1))} disabled={sessionPage === totalPages - 1} style={{ padding: '8px 18px', borderRadius: '50px', border: '2px solid #E2E8F0', background: 'transparent', color: sessionPage === totalPages - 1 ? '#CBD5E1' : '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, cursor: sessionPage === totalPages - 1 ? 'default' : 'pointer', fontSize: '0.85rem' }}>Next →</button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
       </div>
