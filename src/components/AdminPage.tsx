@@ -470,7 +470,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         <div style={{ background: 'white', borderRadius: '24px', padding: '48px 40px', width: '360px', boxShadow: '0 16px 48px rgba(59,130,246,0.12)', textAlign: 'center' }}>
           <BarChart2 size={40} color="#3B82F6" style={{ marginBottom: '16px' }} />
           <h1 style={{ fontFamily: 'Fredoka, sans-serif', color: '#1E3A5F', fontSize: '1.8rem', margin: '0 0 6px' }}>Admin Dashboard</h1>
-          <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '24px' }}>Summer Splash Photobooth 2026</p>
+          <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '24px' }}>Tatt n' Snap 2026</p>
           <input
             type="password" placeholder="Password" value={password}
             onChange={e => setPassword(e.target.value)}
