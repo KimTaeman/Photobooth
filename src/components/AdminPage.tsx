@@ -265,13 +265,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     }
   };
 
-  const handleResetLayout = () => {
+  const handleResetLayout = async () => {
     if (window.confirm('Reset this frame layout to default values?')) {
       setLayout2x2(DEFAULT_LAYOUT);
       if (selectedPreviewFrame) {
-        setFrameLayouts(prev => ({ ...prev, [selectedPreviewFrame]: DEFAULT_LAYOUT }));
+        const nextFrameLayouts = { ...frameLayouts, [selectedPreviewFrame]: DEFAULT_LAYOUT };
+        setFrameLayouts(nextFrameLayouts);
+        setIsSaving(true);
+        try {
+          await Promise.all([
+            updateSetting('frame_layouts', JSON.stringify(nextFrameLayouts)),
+            updateSetting('layout_2x2', JSON.stringify(DEFAULT_LAYOUT))
+          ]);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
+          showNotification('Layout reset to defaults and saved');
+          logAdminAction(`Reset and saved layout for frame: ${selectedPreviewFrame}`);
+        } catch (err) {
+          console.error('Failed to save after reset:', err);
+          showNotification('Layout reset but failed to save', 'error');
+        } finally {
+          setIsSaving(false);
+        }
+      } else {
+        showNotification('Layout values reset to defaults');
       }
-      showNotification('Layout values reset to defaults');
     }
   };
 
