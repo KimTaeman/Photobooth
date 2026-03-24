@@ -1,10 +1,35 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QRCode from 'qrcode';
-import { Sparkles, Download, Film, RotateCcw, QrCode, WifiOff } from 'lucide-react';
+import LottieImport from 'lottie-react';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Lottie = (LottieImport as any).default ?? LottieImport;
+import { Sparkles, Download, Film, RotateCcw, QrCode, WifiOff, Sticker, Trash2 } from 'lucide-react';
 import { uploadToCloudinary } from '../hooks/useCloudinary';
 import { logSession } from '../hooks/useSupabase';
 import { useUploadQueue } from '../hooks/useUploadQueue';
 import logo from '../assets/logo.png';
+
+// Free Lottie animations from lottiefiles.com — swap any URL with another from lottiefiles.com/featured
+const STICKER_CATALOG = [
+  { label: '🎉 Confetti',  src: 'https://assets6.lottiefiles.com/packages/lf20_touohxv0.json' },
+  { label: '⭐ Stars',     src: 'https://assets4.lottiefiles.com/packages/lf20_qm8eqzse.json' },
+  { label: '❤️ Heart',    src: 'https://assets9.lottiefiles.com/packages/lf20_iorpbol0.json' },
+  { label: '🔥 Fire',      src: 'https://assets10.lottiefiles.com/packages/lf20_xyadoh9h.json' },
+  { label: '🌈 Rainbow',   src: 'https://assets2.lottiefiles.com/packages/lf20_xlmz9xwm.json' },
+  { label: '✨ Sparkle',   src: 'https://assets9.lottiefiles.com/packages/lf20_0yfsb3a1.json' },
+  { label: '👋 Wave',      src: 'https://assets1.lottiefiles.com/packages/lf20_uwWgICKCxj.json' },
+  { label: '🎊 Party',     src: 'https://assets5.lottiefiles.com/packages/lf20_fcfjwiyb.json' },
+];
+
+interface PlacedSticker {
+  id: string;
+  src: string;
+  label: string;
+  x: number; // % from left
+  y: number; // % from top
+  size: number; // px in display space
+  data: object | null; // fetched lottie JSON
+}
 
 interface ResultScreenProps {
   isActive: boolean;
@@ -35,6 +60,68 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   const qrRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { addToQueue, pendingCount } = useUploadQueue();
+
+  // --- Sticker state ---
+  const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+  const [showStickerPanel, setShowStickerPanel] = useState(false);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const lottieCacheRef = useRef<Map<string, object>>(new Map());
+
+  const fetchLottieData = useCallback(async (src: string): Promise<object | null> => {
+    if (lottieCacheRef.current.has(src)) return lottieCacheRef.current.get(src)!;
+    try {
+      const res = await fetch(src);
+      const data = await res.json();
+      lottieCacheRef.current.set(src, data);
+      return data;
+    } catch { return null; }
+  }, []);
+
+  const addSticker = useCallback(async (catalog: typeof STICKER_CATALOG[0]) => {
+    const data = await fetchLottieData(catalog.src);
+    setPlacedStickers(prev => [...prev, {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      src: catalog.src, label: catalog.label,
+      x: 40 + Math.random() * 20, y: 40 + Math.random() * 20,
+      size: 120, data,
+    }]);
+  }, [fetchLottieData]);
+
+  const removeSticker = useCallback((id: string) => {
+    setPlacedStickers(prev => prev.filter(s => s.id !== id));
+  }, []);
+
+  const handleStickerDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, id: string) => {
+    e.preventDefault();
+    const strip = stripRef.current;
+    if (!strip) return;
+    const rect = strip.getBoundingClientRect();
+    const sticker = placedStickers.find(s => s.id === id);
+    if (!sticker) return;
+    const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const origX = sticker.x; const origY = sticker.y;
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      const cx = 'touches' in ev ? ev.touches[0].clientX : ev.clientX;
+      const cy = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
+      const dx = ((cx - startX) / rect.width) * 100;
+      const dy = ((cy - startY) / rect.height) * 100;
+      setPlacedStickers(prev => prev.map(s =>
+        s.id === id ? { ...s, x: Math.max(0, Math.min(95, origX + dx)), y: Math.max(0, Math.min(95, origY + dy)) } : s
+      ));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove as EventListener);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove as EventListener);
+      document.removeEventListener('touchend', onUp);
+    };
+    document.addEventListener('mousemove', onMove as EventListener);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove as EventListener, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }, [placedStickers]);
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -269,12 +356,62 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
-  const downloadLocalPhoto = () => {
+  const downloadLocalPhoto = async () => {
     if (!resultBlob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(resultBlob);
-    a.download = `SummerSplash_PhotoStrip_${Date.now()}.jpg`;
-    a.click();
+
+    if (placedStickers.length === 0) {
+      // No stickers — fast path
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(resultBlob);
+      a.download = `SummerSplash_PhotoStrip_${Date.now()}.jpg`;
+      a.click();
+      return;
+    }
+
+    // Bake stickers into the full-res canvas
+    const strip = stripRef.current;
+    const stripRect = strip?.getBoundingClientRect();
+    const canvas = document.createElement('canvas');
+    canvas.width = 2480; canvas.height = 1748;
+    const ctx = canvas.getContext('2d')!;
+    const baseImg = await loadImage(URL.createObjectURL(resultBlob));
+    ctx.drawImage(baseImg, 0, 0, 2480, 1748);
+
+    for (const sticker of placedStickers) {
+      // Find the rendered Lottie SVG element in the DOM
+      const stickerEl = document.getElementById(`sticker-${sticker.id}`);
+      const svgEl = stickerEl?.querySelector('svg');
+      if (!svgEl || !stripRect) continue;
+
+      const clone = svgEl.cloneNode(true) as SVGElement;
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const svgUrl = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
+
+      await new Promise<void>(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = 2480 / stripRect.width;
+          const sw = sticker.size * scale;
+          const sh = sticker.size * scale;
+          const px = (sticker.x / 100) * 2480 - sw / 2;
+          const py = (sticker.y / 100) * 1748 - sh / 2;
+          ctx.drawImage(img, px, py, sw, sh);
+          URL.revokeObjectURL(svgUrl);
+          resolve();
+        };
+        img.onerror = () => { URL.revokeObjectURL(svgUrl); resolve(); };
+        img.src = svgUrl;
+      });
+    }
+
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `SummerSplash_PhotoStrip_${Date.now()}.jpg`;
+      a.click();
+    }, 'image/jpeg', 0.95);
   };
 
   const downloadLocalVideo = () => {
@@ -330,14 +467,79 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
                 <p className="print-title">Summer Splash 2026</p>
                 <p className="print-subtitle">Photobooth Memories</p>
               </div>
-              <div className="result-photo">
-                {resultImg && <img src={resultImg} alt="Your photo strip" />}
+              <div className="result-photo" ref={stripRef} style={{ position: 'relative', display: 'inline-block' }}>
+                {resultImg && <img src={resultImg} alt="Your photo strip" style={{ display: 'block' }} />}
+                {/* Draggable Lottie sticker overlays */}
+                {placedStickers.map(s => (
+                  <div
+                    key={s.id}
+                    id={`sticker-${s.id}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${s.x}%`, top: `${s.y}%`,
+                      width: s.size, height: s.size,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: 'grab', userSelect: 'none', zIndex: 20,
+                      filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
+                    }}
+                    onMouseDown={e => handleStickerDragStart(e, s.id)}
+                    onTouchStart={e => handleStickerDragStart(e, s.id)}
+                    onDoubleClick={() => removeSticker(s.id)}
+                  >
+                    {s.data
+                      ? <Lottie animationData={s.data} loop autoplay style={{ width: '100%', height: '100%' }} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#999' }}>…</div>
+                    }
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); removeSticker(s.id); }}
+                      style={{ position: 'absolute', top: -8, right: -8, width: 20, height: 20, borderRadius: '50%', border: 'none', background: '#EF4444', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontSize: 10 }}
+                    ><Trash2 size={11} /></button>
+                  </div>
+                ))}
               </div>
               <div className="print-only print-footer">
                 <p>Scan the QR code on your invite to download all your memories</p>
                 <p>Save within 24 hours &middot; Summer Splash Photobooth 2026</p>
               </div>
             </div>
+
+            {/* Sticker panel */}
+            {resultImg && (
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowStickerPanel(p => !p)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '50px', border: '2px solid #BAE6FD', background: showStickerPanel ? '#EFF6FF' : 'transparent', color: '#3B82F6', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+                >
+                  <Sticker size={18} /> {showStickerPanel ? 'Hide Stickers' : '✨ Add Stickers'}
+                </button>
+
+                {showStickerPanel && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', padding: '16px', background: 'white', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+                    <p style={{ width: '100%', margin: '0 0 8px', fontSize: '0.75rem', color: '#94A3B8', fontFamily: 'Fredoka, sans-serif' }}>Tap to place · Drag to move · ✕ to remove</p>
+                    {STICKER_CATALOG.map(cat => (
+                      <button
+                        type="button"
+                        key={cat.src}
+                        onClick={() => addSticker(cat)}
+                        style={{ width: 72, height: 72, borderRadius: '16px', border: '2px solid #E2E8F0', background: '#F8FAFC', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.6rem', color: '#64748B', fontFamily: 'Fredoka, sans-serif', padding: '4px', transition: 'border-color 0.15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#3B82F6')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+                      >
+                        <div style={{ width: 44, height: 44 }}>
+                          {lottieCacheRef.current.has(cat.src)
+                            ? <Lottie animationData={lottieCacheRef.current.get(cat.src)!} loop autoplay style={{ width: '100%', height: '100%' }} />
+                            : <span style={{ fontSize: '1.6rem', lineHeight: '44px' }}>{cat.label.split(' ')[0]}</span>
+                          }
+                        </div>
+                        <span>{cat.label.split(' ').slice(1).join(' ')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {videoPreviewUrl && (
               <div className="result-video" style={{ position: 'relative', cursor: 'pointer', margin:'auto', marginTop: 0 }} onClick={togglePlay}>
