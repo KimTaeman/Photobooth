@@ -23,12 +23,14 @@ export interface QueuedUpload {
 
 const QUEUE_DIR = 'upload_queue';
 const METADATA_FILE = 'queue_metadata.json';
+const MAX_RETRIES = 5;
 
 const isTauri = () => !!(window as any).__TAURI_INTERNALS__;
 
 export function useUploadQueue() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
 
   // Initialize the queue directory
   const initQueue = useCallback(async () => {
@@ -48,9 +50,11 @@ export function useUploadQueue() {
     if (!isTauri()) return;
     try {
       const metadata = await getMetadata();
-      setPendingCount(metadata.length);
+      setPendingCount(metadata.filter(item => item.retryCount < MAX_RETRIES).length);
+      setFailedCount(metadata.filter(item => item.retryCount >= MAX_RETRIES).length);
     } catch (err) {
       setPendingCount(0);
+      setFailedCount(0);
     }
   }, []);
 
@@ -127,6 +131,19 @@ export function useUploadQueue() {
 
     for (let i = 0; i < metadata.length; i++) {
       const item = metadata[i];
+
+      // Permanently discard items that have exceeded max retries
+      if (item.retryCount >= MAX_RETRIES) {
+        try {
+          await remove(item.localPath, { baseDir: BaseDirectory.AppCache });
+        } catch {
+          // File may already be gone; ignore
+        }
+        toRemoveIndices.push(i);
+        console.warn(`Upload permanently failed after ${MAX_RETRIES} retries, discarding: ${item.filename}`);
+        continue;
+      }
+
       try {
         const fileContent = await readFile(item.localPath, { baseDir: BaseDirectory.AppCache });
         const blob = new Blob([fileContent], { type: item.type === 'video' ? 'video/webm' : 'image/jpeg' });
@@ -143,9 +160,8 @@ export function useUploadQueue() {
         toRemoveIndices.push(i);
         console.log(`Successfully uploaded queued item: ${item.filename}`);
       } catch (err) {
-        console.error(`Failed to upload queued item ${item.filename}:`, err);
         updatedMetadata[i].retryCount += 1;
-        // Optionally: implement max retries and move to 'failed' folder
+        console.error(`Failed to upload queued item ${item.filename} (attempt ${updatedMetadata[i].retryCount}/${MAX_RETRIES}):`, err);
       }
     }
 
@@ -170,6 +186,7 @@ export function useUploadQueue() {
     addToQueue,
     processQueue,
     pendingCount,
+    failedCount,
     isProcessing
   };
 }
