@@ -9,6 +9,7 @@ import ResultScreen from './components/ResultScreen';
 import SummerSplashPage from './components/SummerSplashPage';
 import AdminPage from './components/AdminPage';
 import NotFoundPage from './components/NotFoundPage';
+import StickerTestPage from './components/StickerTestPage';
 import type { Screen } from './types';
 import { getAllSettings, supabase } from './hooks/useSupabase';
 import type { RemoteConfig } from './hooks/useSupabase';
@@ -124,6 +125,7 @@ function App() {
         <Route path="/" element={<PhotoboothApp isAdminAuthenticated={isAdminAuthenticated} />} />
         <Route path="/summer-splash" element={<SummerSplashPage />} />
         <Route path="/admin" element={<AdminPage authed={isAdminAuthenticated} setAuthed={setIsAdminAuthenticated} />} />
+        <Route path="/sticker-test" element={<StickerTestPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </HashRouter>
