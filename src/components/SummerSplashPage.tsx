@@ -4,6 +4,7 @@ import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapp
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
 import Stickers from './Stickers';
 import { Link } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 
 const SummerSplashPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -190,9 +191,7 @@ const SummerSplashPage: React.FC = () => {
                 boxShadow: '0 4px 20px rgba(59, 130, 246, 0.05)',
                 marginBottom: '20px'
             }}>
-                <h1 style={{ fontFamily: 'Fredoka, sans-serif', color: '#3B82F6', margin: 0, fontSize: '1.8rem' }}>
-                    Summer Splash 2026
-                </h1>
+                <img src={logoImg} alt="Summer Splash 2026" style={{ maxWidth: '220px', width: '60%', height: 'auto', margin: '0 auto 4px', display: 'block' }} />
                 <p style={{ color: '#64748B', marginTop: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
                     Your Memories are Ready!
                 </p>
