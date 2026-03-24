@@ -82,14 +82,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
       slotH: 794,
     };
 
-  const { margin, gutterX, gutterY, slotW, slotH } = layout;
-  const slots = [
-    { x: margin, y: margin },
-    { x: margin + slotW + gutterX, y: margin },
-    { x: margin, y: margin + slotH + gutterY },
-    { x: margin + slotW + gutterX, y: margin + slotH + gutterY },
-  ];
-  const currentSlot = slots[shotNum - 1] || slots[0];
+  const { slotW, slotH } = layout;
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
