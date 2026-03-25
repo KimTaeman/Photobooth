@@ -1,18 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import LottieImport from 'lottie-react';
+import { STICKERS } from "../constants/sticker";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Lottie = (LottieImport as any).default ?? LottieImport;
 
-const STICKER_CATALOG = [
-  { label: '🎉 Confetti',  src: 'https://assets6.lottiefiles.com/packages/lf20_touohxv0.json' },
-  { label: '⭐ Stars',     src: 'https://assets4.lottiefiles.com/packages/lf20_qm8eqzse.json' },
-  { label: '❤️ Heart',    src: 'https://assets9.lottiefiles.com/packages/lf20_iorpbol0.json' },
-  { label: '🔥 Fire',      src: 'https://assets10.lottiefiles.com/packages/lf20_xyadoh9h.json' },
-  { label: '🌈 Rainbow',   src: 'https://assets2.lottiefiles.com/packages/lf20_xlmz9xwm.json' },
-  { label: '✨ Sparkle',   src: 'https://assets9.lottiefiles.com/packages/lf20_0yfsb3a1.json' },
-  { label: '👋 Wave',      src: 'https://assets1.lottiefiles.com/packages/lf20_uwWgICKCxj.json' },
-  { label: '🎊 Party',     src: 'https://assets5.lottiefiles.com/packages/lf20_fcfjwiyb.json' },
-];
+const STICKER_CATALOG = STICKERS;
 
 interface PlacedSticker {
   id: string;
@@ -34,22 +26,30 @@ const StickerTestPage: React.FC = () => {
 
   const fetchLottieData = useCallback(async (src: string): Promise<object | null> => {
     if (lottieCacheRef.current.has(src)) {
-      addLog(`Cache hit: ${src.split('/').pop()}`);
       return lottieCacheRef.current.get(src)!;
     }
     try {
-      addLog(`Fetching: ${src.split('/').pop()}…`);
       const res = await fetch(src);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       lottieCacheRef.current.set(src, data);
-      addLog(`✅ Loaded: ${src.split('/').pop()}`);
       return data;
     } catch (e) {
       addLog(`❌ Failed: ${(e as Error).message}`);
       return null;
     }
   }, []);
+
+  // Pre-fetch all stickers for the palette
+  useEffect(() => {
+    const prefetch = async () => {
+      addLog('Pre-fetching all stickers…');
+      await Promise.all(STICKER_CATALOG.map(cat => fetchLottieData(cat.src)));
+      // Force re-render to show cached stickers
+      setLog(prev => [`[${new Date().toLocaleTimeString()}] ✅ All stickers loaded`, ...prev.slice(0, 9)]);
+    };
+    prefetch();
+  }, [fetchLottieData]);
 
   const addSticker = useCallback(async (catalog: typeof STICKER_CATALOG[0]) => {
     addLog(`Adding sticker: ${catalog.label}`);

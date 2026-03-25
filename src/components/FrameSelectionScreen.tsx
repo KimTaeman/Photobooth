@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Palette, Camera, Sun } from 'lucide-react';
 import logo from '../assets/logo.png';
+import type { RemoteConfig } from '../hooks/useSupabase';
 
 interface FrameSelectionScreenProps {
   onStartSession: (frame: string) => void;
@@ -8,6 +9,7 @@ interface FrameSelectionScreenProps {
   selectedFrame: string | null;
   onSelectFrame: (frame: string) => void;
   availableFrames?: string[];
+  config: RemoteConfig | null;
 }
 
 const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({ 
@@ -15,7 +17,8 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   isActive, 
   selectedFrame, 
   onSelectFrame,
-  availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png']
+  availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png'],
+  config
 }) => {
   const [isIdle, setIsIdle] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,6 +47,10 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
     };
   }, [isActive, resetIdleTimer]);
 
+  const handleStartClick = () => {
+    if (selectedFrame) onStartSession(selectedFrame);
+  };
+
   return (
     <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`}>
       <div className="frames-header">
@@ -60,9 +67,22 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
           </div>
         ))}
       </div>
-      <button className={`btn btn-primary btn-lg ${selectedFrame ? 'ready' : ''}`} id="btn-start-session" disabled={!selectedFrame} onClick={() => selectedFrame && onStartSession(selectedFrame)}>
+      <button 
+        className={`btn btn-primary btn-lg ${selectedFrame ? 'ready' : ''}`} 
+        id="btn-start-session" 
+        disabled={!selectedFrame} 
+        onClick={handleStartClick}
+      >
         <Camera size={20} /> Start Photo Session
       </button>
+
+      {config?.enablePdpa && (
+        <div style={{ marginTop: 'auto', padding: '30px 20px', textAlign: 'center', width: '100%', maxWidth: '600px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          <p style={{ fontWeight: 600, marginBottom: '6px' }}>{config.pdpaTextTh}</p>
+          <p style={{ fontSize: '0.75rem', opacity: 0.8 }}>{config.pdpaTextEn}</p>
+          <p style={{ marginTop: '12px', fontWeight: 700, color: 'var(--blue)' }}>* รูปภาพของคุณจะถูกลบอัตโนมัติภายใน 24 ชั่วโมง / Your photos will be automatically deleted after 24 hours</p>
+        </div>
+      )}
 
       {isIdle && (
         <div className="idle-overlay" onClick={resetIdleTimer}>

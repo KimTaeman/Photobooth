@@ -46,6 +46,9 @@ export interface RemoteConfig {
     enableVideo: boolean;
     activeFilter: string;
     testMode: boolean;
+    enablePdpa: boolean;
+    pdpaTextEn: string;
+    pdpaTextTh: string;
     layout2x2?: {
         margin: number;
         gutterX: number;
@@ -65,11 +68,14 @@ export interface RemoteConfig {
 export async function getAllSettings(): Promise<RemoteConfig> {
     const defaultFrames = ['/frame1.png', '/frame2.png', '/frame3.png'];
     const defaultLayout = { margin: 210, gutterX: 70, gutterY: 73, slotW: 995, slotH: 681 };
+    const defaultPdpaTh = 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้';
+    const defaultPdpaEn = 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.';
+    
     try {
         const { data, error } = await supabase.from('settings').select('*');
         if (error) throw error;
 
-        const settingsMap = (data || []).reduce((acc: any, curr: any) => {
+        const settingsMap = (data || []).reduce((acc: Record<string, string>, curr: { key: string; value: string }) => {
             acc[curr.key] = curr.value;
             return acc;
         }, {});
@@ -82,6 +88,9 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             enableVideo: settingsMap['enable_video'] === 'true',
             activeFilter: settingsMap['active_filter'] || 'none',
             testMode: settingsMap['test_mode'] === 'true',
+            enablePdpa: settingsMap['enable_pdpa'] === 'true',
+            pdpaTextEn: settingsMap['pdpa_text_en'] || defaultPdpaEn,
+            pdpaTextTh: settingsMap['pdpa_text_th'] || defaultPdpaTh,
             layout2x2: settingsMap['layout_2x2'] ? JSON.parse(settingsMap['layout_2x2']) : defaultLayout,
             frameLayouts: settingsMap['frame_layouts'] ? JSON.parse(settingsMap['frame_layouts']) : {},
         };
@@ -95,6 +104,9 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             enableVideo: true,
             activeFilter: 'none',
             testMode: false,
+            enablePdpa: false,
+            pdpaTextEn: defaultPdpaEn,
+            pdpaTextTh: defaultPdpaTh,
             layout2x2: defaultLayout,
         };
     }

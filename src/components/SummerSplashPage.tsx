@@ -380,8 +380,14 @@ const SummerSplashPage: React.FC = () => {
                 </div>
             </div>
 
-            <footer style={{ marginTop: 'auto', padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                Made with <Heart size={13} fill="#64748B" /> Photobooth 2026
+            <footer style={{ marginTop: 'auto', padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.8rem', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                <div style={{ maxWidth: '400px', opacity: 0.8, fontWeight: 500, lineHeight: '1.4' }}>
+                    <p style={{ marginBottom: '4px' }}>การเก็บรวบรวมและใช้ข้อมูลส่วนบุคคล (รูปภาพ) เป็นไปตามนโยบายความเป็นส่วนตัวเพื่อวัตถุประสงค์ในการให้บริการนี้เท่านั้น รูปภาพจะถูกลบอัตโนมัติภายใน 24 ชั่วโมง</p>
+                    <p style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Collection and use of personal data (photos) follows our privacy policy for service purposes only. Photos are automatically deleted within 24 hours.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    Made with <Heart size={13} fill="#64748B" /> Photobooth 2026
+                </div>
             </footer>
         </div>
     );

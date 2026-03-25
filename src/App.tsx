@@ -93,6 +93,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
         onSelectFrame={handleSelectFrame}
         onStartSession={handleStartSession}
         availableFrames={config?.availableFrames}
+        config={config}
       />
 
       <CameraScreen 

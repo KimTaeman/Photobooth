@@ -43,6 +43,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [activeFilter, setActiveFilter] = useState('none');
   const [enableVideo, setEnableVideo] = useState(true);
   const [testMode, setTestMode] = useState(false);
+  const [enablePdpa, setEnablePdpa] = useState(false);
+  const [pdpaTextEn, setPdpaTextEn] = useState('');
+  const [pdpaTextTh, setPdpaTextTh] = useState('');
   const [countdownDuration, setCountdownDuration] = useState(10);
   const [layout2x2, setLayout2x2] = useState(DEFAULT_LAYOUT);
   const [frameLayouts, setFrameLayouts] = useState<Record<string, typeof layout2x2>>({});
@@ -85,11 +88,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sessionsRes, filterSetting, videoSetting, testModeSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
+      const [sessionsRes, filterSetting, videoSetting, testModeSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
         getSetting('active_filter', 'none'),
         getSetting('enable_video', 'true'),
         getSetting('test_mode', 'false'),
+        getSetting('enable_pdpa', 'false'),
+        getSetting('pdpa_text_en', 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.'),
+        getSetting('pdpa_text_th', 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้'),
         getSetting('countdown_duration', '10'),
         getSetting('layout_2x2', JSON.stringify(DEFAULT_LAYOUT)),
         getSetting('available_frames', JSON.stringify(['/frame1.png', '/frame2.png', '/frame3.png'])),
@@ -104,6 +110,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setActiveFilter(filterSetting);
       setEnableVideo(videoSetting === 'true');
       setTestMode(testModeSetting === 'true');
+      setEnablePdpa(pdpaSetting === 'true');
+      setPdpaTextEn(pdpaEnSetting);
+      setPdpaTextTh(pdpaThSetting);
       setCountdownDuration(parseInt(countdownSetting));
       setLayout2x2(JSON.parse(layoutSetting));
       const frames = JSON.parse(framesSetting);
@@ -181,38 +190,56 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     }, 1200);
   };
 
-  const handleUpdateSetting = (key: string, value: any) => {
+  const handleUpdateSetting = (key: string, value: string | boolean | number) => {
     let nextActiveFilter = activeFilter;
     let nextEnableVideo = enableVideo;
     let nextTestMode = testMode;
+    let nextEnablePdpa = enablePdpa;
+    let nextPdpaTextEn = pdpaTextEn;
+    let nextPdpaTextTh = pdpaTextTh;
     let nextCountdownDuration = countdownDuration;
     let msg = 'Setting updated';
 
     if (key === 'active_filter') {
-      setActiveFilter(value);
-      nextActiveFilter = value;
-      const filterLabel = AVAILABLE_FILTERS.find(f => f.id === value)?.label || 'None';
+      setActiveFilter(value as string);
+      nextActiveFilter = value as string;
+      const filterLabel = AVAILABLE_FILTERS.find(f => f.id === (value as string))?.label || 'None';
       msg = `${filterLabel} filter applied`;
     }
     if (key === 'enable_video') {
-      setEnableVideo(value);
-      nextEnableVideo = value;
+      setEnableVideo(value as boolean);
+      nextEnableVideo = value as boolean;
       msg = `Video recording ${value ? 'enabled' : 'disabled'}`;
     }
     if (key === 'test_mode') {
-      setTestMode(value);
-      nextTestMode = value;
+      setTestMode(value as boolean);
+      nextTestMode = value as boolean;
       msg = `Test mode ${value ? 'turned on' : 'turned off'}`;
     }
+    if (key === 'enable_pdpa') {
+      setEnablePdpa(value as boolean);
+      nextEnablePdpa = value as boolean;
+      msg = `PDPA consent ${value ? 'enabled' : 'disabled'}`;
+    }
+    if (key === 'pdpa_text_en') {
+      setPdpaTextEn(value as string);
+      nextPdpaTextEn = value as string;
+      msg = 'PDPA English text updated';
+    }
+    if (key === 'pdpa_text_th') {
+      setPdpaTextTh(value as string);
+      nextPdpaTextTh = value as string;
+      msg = 'PDPA Thai text updated';
+    }
     if (key === 'countdown_duration') {
-      setCountdownDuration(value);
-      nextCountdownDuration = value;
+      setCountdownDuration(value as number);
+      nextCountdownDuration = value as number;
       msg = `Countdown set to ${value}s`;
     }
 
     if (key.startsWith('layout_')) {
       const field = key.replace('layout_', '');
-      const nextLayout = { ...layout2x2, [field as keyof typeof layout2x2]: parseInt(value) };
+      const nextLayout = { ...layout2x2, [field as keyof typeof layout2x2]: parseInt(value as string) };
       setLayout2x2(nextLayout);
       // Sync locally so switching frames doesn't lose unsaved changes
       if (selectedPreviewFrame) {
@@ -226,6 +253,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         active_filter: nextActiveFilter,
         enable_video: nextEnableVideo,
         test_mode: nextTestMode,
+        enable_pdpa: nextEnablePdpa,
+        pdpa_text_en: nextPdpaTextEn,
+        pdpa_text_th: nextPdpaTextTh,
         countdown_duration: nextCountdownDuration,
         // We still include layout_2x2 in the global auto-save to keep it in sync with other settings
         layout_2x2: JSON.stringify(layout2x2)
@@ -351,7 +381,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         } else {
           setDisplayValue(value.toString());
         }
-      } catch (err) {
+      } catch {
         setDisplayValue(value.toString());
       }
     };
@@ -716,6 +746,39 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                         <label style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Visual Preview</label>
                         <LayoutPreview />
                         <p style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '8px', fontStyle: 'italic' }}>Black areas are where photos will be drawn.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A5F', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
+                      <ShieldCheck size={18} color="#3B82F6" /> PDPA Thailand
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.9rem', color: '#1E3A5F', fontWeight: 600 }}>Enable PDPA Consent</span>
+                        <div 
+                          onClick={() => handleUpdateSetting('enable_pdpa', !enablePdpa)}
+                          style={{ width: '44px', height: '24px', borderRadius: '12px', background: enablePdpa ? '#3B82F6' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
+                        >
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enablePdpa ? '23px' : '3px', transition: 'all 0.2s' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Thai Consent Text</label>
+                        <textarea 
+                          value={pdpaTextTh}
+                          onChange={(e) => handleUpdateSetting('pdpa_text_th', e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #E2E8F0', fontSize: '0.85rem', width: '100%', outline: 'none', boxSizing: 'border-box', minHeight: '80px', fontFamily: 'inherit' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>English Consent Text</label>
+                        <textarea 
+                          value={pdpaTextEn}
+                          onChange={(e) => handleUpdateSetting('pdpa_text_en', e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #E2E8F0', fontSize: '0.85rem', width: '100%', outline: 'none', boxSizing: 'border-box', minHeight: '80px', fontFamily: 'inherit' }}
+                        />
                       </div>
                     </div>
                   </div>

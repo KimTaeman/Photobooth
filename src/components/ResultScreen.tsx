@@ -8,18 +8,10 @@ import { uploadToCloudinary } from '../hooks/useCloudinary';
 import { logSession } from '../hooks/useSupabase';
 import { useUploadQueue } from '../hooks/useUploadQueue';
 import logo from '../assets/logo.png';
+import { STICKERS } from "../constants/sticker";
 
 // Free Lottie animations from lottiefiles.com — swap any URL with another from lottiefiles.com/featured
-const STICKER_CATALOG = [
-  { label: '🎉 Confetti',  src: 'https://assets6.lottiefiles.com/packages/lf20_touohxv0.json' },
-  { label: '⭐ Stars',     src: 'https://assets4.lottiefiles.com/packages/lf20_qm8eqzse.json' },
-  { label: '❤️ Heart',    src: 'https://assets9.lottiefiles.com/packages/lf20_iorpbol0.json' },
-  { label: '🔥 Fire',      src: 'https://assets10.lottiefiles.com/packages/lf20_xyadoh9h.json' },
-  { label: '🌈 Rainbow',   src: 'https://assets2.lottiefiles.com/packages/lf20_xlmz9xwm.json' },
-  { label: '✨ Sparkle',   src: 'https://assets9.lottiefiles.com/packages/lf20_0yfsb3a1.json' },
-  { label: '👋 Wave',      src: 'https://assets1.lottiefiles.com/packages/lf20_uwWgICKCxj.json' },
-  { label: '🎊 Party',     src: 'https://assets5.lottiefiles.com/packages/lf20_fcfjwiyb.json' },
-];
+const STICKER_CATALOG = STICKERS;
 
 interface PlacedSticker {
   id: string;
@@ -64,6 +56,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   // --- Sticker state ---
   const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
   const [showStickerPanel, setShowStickerPanel] = useState(false);
+  const [isStickersLoaded, setIsStickersLoaded] = useState(false);
   const stripRef = useRef<HTMLDivElement>(null);
   const lottieCacheRef = useRef<Map<string, object>>(new Map());
 
@@ -76,6 +69,17 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       return data;
     } catch { return null; }
   }, []);
+
+  // Pre-fetch stickers when the screen becomes active
+  useEffect(() => {
+    if (isActive && !isStickersLoaded) {
+      const prefetch = async () => {
+        await Promise.all(STICKER_CATALOG.map(cat => fetchLottieData(cat.src)));
+        setIsStickersLoaded(true);
+      };
+      prefetch();
+    }
+  }, [isActive, isStickersLoaded, fetchLottieData]);
 
   const addSticker = useCallback(async (catalog: typeof STICKER_CATALOG[0]) => {
     const data = await fetchLottieData(catalog.src);
