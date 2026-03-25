@@ -52,7 +52,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   };
 
   return (
-    <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`}>
+    <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`} style={{ overflowY: isIdle ? 'hidden' : 'auto' }}>
       <div className="frames-header">
         <img src={logo} alt="Tatt n' Snap" style={{ height: '70px', objectFit: 'contain', marginBottom: '4px' }} />
         <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Palette size={30} /> Choose Your Frame</h1>
