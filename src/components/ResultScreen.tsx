@@ -509,7 +509,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             </div>
 
             {/* Sticker panel */}
-            {resultImg && (
+            {resultImg && config?.enableStickers && (
               <div style={{ textAlign: 'center' }}>
                 <button
                   type="button"
