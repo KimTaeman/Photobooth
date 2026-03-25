@@ -283,6 +283,23 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     }
   };
 
+  const handleManualSave = () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    saveSettingsToDB({
+      active_filter: activeFilter,
+      enable_video: enableVideo,
+      test_mode: testMode,
+      enable_pdpa: enablePdpa,
+      enable_stickers: enableStickers,
+      enable_boomerang: enableBoomerang,
+      pdpa_text_en: pdpaTextEn,
+      pdpa_text_th: pdpaTextTh,
+      countdown_duration: countdownDuration,
+      layout_2x2: JSON.stringify(layout2x2)
+    }, 'Settings saved manually');
+    logAdminAction('Manual settings save');
+  };
+
   const handleSaveFrameLayout = async () => {
     if (!selectedPreviewFrame) return;
     setIsSaving(true);
@@ -614,19 +631,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                   <Settings size={20} color="#3B82F6" /> Photobooth Settings
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {isSaving && <span style={{ fontSize: '0.8rem', color: '#3B82F6', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="spin" /> Auto-saving...</span>}
                   <button 
+                    onClick={handleManualSave}
                     disabled={isSaving}
                     style={{ 
                       display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', 
                       borderRadius: '50px', border: 'none', 
                       background: saveSuccess ? '#22C55E' : 'linear-gradient(135deg, #3B82F6, #2563EB)', 
                       color: 'white', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, 
-                      cursor: 'default', fontSize: '0.9rem', transition: 'all 0.3s', opacity: isSaving ? 0.7 : 1
+                      cursor: isSaving ? 'default' : 'pointer', fontSize: '0.9rem', transition: 'all 0.3s', opacity: isSaving ? 0.7 : 1
                     }}
                   >
                     {saveSuccess ? <CheckCircle size={18} /> : isSaving ? <RefreshCw size={18} className="spin" /> : <Save size={18} />}
-                    {/* {saveSuccess ? 'Saved!' : isSaving ? 'Saving...' : 'Settings'} */}
+                    {saveSuccess ? 'Saved!' : isSaving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </div>
