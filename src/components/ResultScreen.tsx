@@ -435,7 +435,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   // processAndUpload is stable for the lifetime of a session — intentionally omitted
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, photos, selectedFrame]);
+  }, [isActive, photos, selectedFrame, config]);
 
   return (
     <div id="screen-result" className={`screen ${isActive ? 'active' : ''}`}>

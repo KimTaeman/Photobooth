@@ -616,7 +616,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                     }}
                   >
                     {saveSuccess ? <CheckCircle size={18} /> : isSaving ? <RefreshCw size={18} className="spin" /> : <Save size={18} />}
-                    {saveSuccess ? 'Saved!' : isSaving ? 'Saving...' : 'Settings Live'}
+                    {/* {saveSuccess ? 'Saved!' : isSaving ? 'Saving...' : 'Settings'} */}
                   </button>
                 </div>
               </div>
@@ -818,7 +818,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                     </div>
                   </div>
 
-                  <div style={{ background: '#FFF1F2', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ background: '#FFF1F2', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center'}} className="danger-zone-card">
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E11D48', fontWeight: 700, marginBottom: '12px', fontSize: '1rem' }}>
                       <Trash2 size={18} color="#E11D48" /> Danger Zone
                     </label>
@@ -933,6 +933,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         .spin { animation: spin 1s linear infinite; }
         .admin-session-card:hover .admin-session-overlay { opacity: 1 !important; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @media (min-width: 768px) { .danger-zone-card { max-height: 30%; } }
       `}</style>
     </div>
   );

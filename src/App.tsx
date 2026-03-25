@@ -80,7 +80,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
 
   return (
     <div className={`app-container theme-${config?.eventTheme || 'default'}`}>
-      <Stickers />
+      <Stickers config={config} />
       
       <LockScreen 
         isActive={currentScreen === 'lock'} 
