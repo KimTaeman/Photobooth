@@ -887,7 +887,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
 
             {/* Recent gallery */}
             {sessions.length > 0 && (() => {
-              const SESSIONS_PER_PAGE = 12;
+              const SESSIONS_PER_PAGE = 15;
               const filtered = sessions
                 .filter(s => sessionTypeFilter === 'all' || (sessionTypeFilter === 'video' ? s.has_video : !s.has_video))
                 .filter(s => !sessionSearch || s.id.toLowerCase().includes(sessionSearch.toLowerCase()) || new Date(s.created_at).toLocaleDateString().includes(sessionSearch));
