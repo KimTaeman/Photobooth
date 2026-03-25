@@ -1,7 +1,7 @@
 import React from 'react';
 import type { RemoteConfig } from "../hooks/useSupabase";
 
-const Stickers: React.FC<{ config: RemoteConfig }> = ({ config }) => {
+const Stickers: React.FC<{ config?: RemoteConfig | null }> = ({ config }) => {
   if (!config?.enableStickers) return null;
   return (
     <>

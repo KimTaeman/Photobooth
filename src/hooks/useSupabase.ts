@@ -50,6 +50,7 @@ export interface RemoteConfig {
     pdpaTextEn: string;
     pdpaTextTh: string;
     enableStickers: boolean;
+  enableBoomerang: boolean;
     layout2x2?: {
         margin: number;
         gutterX: number;
@@ -92,7 +93,8 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             enablePdpa: settingsMap['enable_pdpa'] === 'true',
             pdpaTextEn: settingsMap['pdpa_text_en'] || defaultPdpaEn,
             pdpaTextTh: settingsMap['pdpa_text_th'] || defaultPdpaTh,
-            enableStickers: settingsMap['enable_stickers'] !== 'false', // Default to true
+            enableStickers: settingsMap['enable_stickers'] !== 'false',
+            enableBoomerang: settingsMap['enable_boomerang'] !== 'false',
             layout2x2: settingsMap['layout_2x2'] ? JSON.parse(settingsMap['layout_2x2']) : defaultLayout,
             frameLayouts: settingsMap['frame_layouts'] ? JSON.parse(settingsMap['frame_layouts']) : {},
         };
@@ -110,6 +112,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             pdpaTextEn: defaultPdpaEn,
             pdpaTextTh: defaultPdpaTh,
             enableStickers: true,
+            enableBoomerang: true,
             layout2x2: defaultLayout,
         };
     }

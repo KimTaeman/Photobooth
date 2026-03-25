@@ -45,6 +45,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [testMode, setTestMode] = useState(false);
   const [enablePdpa, setEnablePdpa] = useState(false);
   const [enableStickers, setEnableStickers] = useState(true);
+  const [enableBoomerang, setEnableBoomerang] = useState(true);
   const [pdpaTextEn, setPdpaTextEn] = useState('');
   const [pdpaTextTh, setPdpaTextTh] = useState('');
   const [countdownDuration, setCountdownDuration] = useState(10);
@@ -89,7 +90,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sessionsRes, filterSetting, videoSetting, testModeSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
+      const [sessionsRes, filterSetting, videoSetting, testModeSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, boomerangSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
         getSetting('active_filter', 'none'),
         getSetting('enable_video', 'true'),
@@ -98,6 +99,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         getSetting('pdpa_text_en', 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.'),
         getSetting('pdpa_text_th', 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้'),
         getSetting('enable_stickers', 'true'),
+        getSetting('enable_boomerang', 'true'),
         getSetting('countdown_duration', '10'),
         getSetting('layout_2x2', JSON.stringify(DEFAULT_LAYOUT)),
         getSetting('available_frames', JSON.stringify(['/frame1.png', '/frame2.png', '/frame3.png'])),
@@ -114,6 +116,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setTestMode(testModeSetting === 'true');
       setEnablePdpa(pdpaSetting === 'true');
       setEnableStickers(stickersSetting === 'true');
+      setEnableBoomerang(boomerangSetting === 'true');
       setPdpaTextEn(pdpaEnSetting);
       setPdpaTextTh(pdpaThSetting);
       setCountdownDuration(parseInt(countdownSetting));
@@ -199,6 +202,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     let nextTestMode = testMode;
     let nextEnablePdpa = enablePdpa;
     let nextEnableStickers = enableStickers;
+    let nextEnableBoomerang = enableBoomerang;
     let nextPdpaTextEn = pdpaTextEn;
     let nextPdpaTextTh = pdpaTextTh;
     let nextCountdownDuration = countdownDuration;
@@ -229,6 +233,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setEnableStickers(value as boolean);
       nextEnableStickers = value as boolean;
       msg = `Stickers ${value ? 'enabled' : 'disabled'}`;
+    }
+    if (key === 'enable_boomerang') {
+      setEnableBoomerang(value as boolean);
+      nextEnableBoomerang = value as boolean;
+      msg = `Boomerang GIF ${value ? 'enabled' : 'disabled'}`;
     }
     if (key === 'pdpa_text_en') {
       setPdpaTextEn(value as string);
@@ -264,6 +273,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         test_mode: nextTestMode,
         enable_pdpa: nextEnablePdpa,
         enable_stickers: nextEnableStickers,
+        enable_boomerang: nextEnableBoomerang,
         pdpa_text_en: nextPdpaTextEn,
         pdpa_text_th: nextPdpaTextTh,
         countdown_duration: nextCountdownDuration,
@@ -676,6 +686,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                           style={{ width: '44px', height: '24px', borderRadius: '12px', background: enableStickers ? '#3B82F6' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
                         >
                           <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enableStickers ? '23px' : '3px', transition: 'all 0.2s' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.9rem', color: '#1E3A5F', fontWeight: 600 }}>Enable Boomerang GIF</span>
+                        <div 
+                          onClick={() => handleUpdateSetting('enable_boomerang', !enableBoomerang)}
+                          style={{ width: '44px', height: '24px', borderRadius: '12px', background: enableBoomerang ? '#3B82F6' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
+                        >
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enableBoomerang ? '23px' : '3px', transition: 'all 0.2s' }} />
                         </div>
                       </div>
                       <div>

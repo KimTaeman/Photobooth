@@ -206,6 +206,27 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       }
       // Hold last frame
       frames.push(frames[frames.length - 1], frames[frames.length - 1]);
+
+      // Boomerang: append frames in reverse (skip first and last to avoid duplicate)
+      if (config?.enableBoomerang !== false) {
+        for (let fi = burstLen - 2; fi >= 1; fi--) {
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.filter = 'none';
+          ctx.drawImage(frameImg, 0, 0, w, h);
+          for (let si = 0; si < 4; si++) {
+            const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
+            if (img) {
+              ctx.filter = 'none';
+              drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
+            }
+          }
+          frames.push(c.toDataURL('image/jpeg', 0.82));
+        }
+      }
     } else {
       // Fallback: progressive reveal with static photos
       const photoImgs = await Promise.all(photoUrls.map(loadImage));
