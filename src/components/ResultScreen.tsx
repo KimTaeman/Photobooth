@@ -489,7 +489,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           <div className="result-left" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="print-area" style={{margin: 'auto'}}>
               <div className="print-only print-header">
-                <p className="print-title">Summer Splash 2026</p>
+                <p className="print-title">Tatt n' Snap 2026</p>
                 <p className="print-subtitle">Photobooth Memories</p>
               </div>
               <div className="result-photo" ref={stripRef} style={{ position: 'relative', display: 'inline-block' }}>
@@ -525,7 +525,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
               </div>
               <div className="print-only print-footer">
                 <p>Scan the QR code on your invite to download all your memories</p>
-                <p>Save within 24 hours &middot; Summer Splash Photobooth 2026</p>
+                <p>Save within 24 hours &middot; Tatt n' Snap 2026</p>
               </div>
             </div>
 

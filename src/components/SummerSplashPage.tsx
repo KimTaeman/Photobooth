@@ -46,7 +46,7 @@ const SummerSplashPage: React.FC = () => {
     const handleShare = async () => {
         const url = window.location.href;
         if (navigator.share) {
-            await navigator.share({ title: 'Summer Splash 2026 – My Memories', url });
+            await navigator.share({ title:"Tatt n' Snap 2026 – My Memories", url });
         } else {
             await navigator.clipboard.writeText(url);
             setShareCopied(true);
@@ -159,7 +159,7 @@ const SummerSplashPage: React.FC = () => {
                     
                     <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', width: '100%', paddingTop: '10px' }}>
                         <p style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                            <Camera size={14} /> Summer Splash 2026
+                            <Camera size={14} /> Tatt n' Snap 2026
                         </p>
                     </div>
                 </div>
@@ -191,7 +191,7 @@ const SummerSplashPage: React.FC = () => {
                 boxShadow: '0 4px 20px rgba(59, 130, 246, 0.05)',
                 marginBottom: '20px'
             }}>
-                <img src={logoImg} alt="Summer Splash 2026" style={{ maxWidth: '220px', width: '60%', height: 'auto', margin: '0 auto 4px', display: 'block' }} />
+                <img src={logoImg} alt="Tatt n' Snap 2026" style={{ maxWidth: '220px', width: '60%', height: 'auto', margin: '0 auto 4px', display: 'block' }} />
                 <p style={{ color: '#64748B', marginTop: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
                     Your Memories are Ready!
                 </p>

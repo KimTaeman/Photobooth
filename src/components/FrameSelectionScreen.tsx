@@ -92,7 +92,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
           <div className="idle-content">
             <div className="idle-sun"><Sun size={72} strokeWidth={1.5} /></div>
             <h2 className="idle-title">Tap to Start!</h2>
-            <p className="idle-subtitle">Create your Summer Splash memories</p>
+            <p className="idle-subtitle">Create your Tatt n' Snap memories</p>
             <div className="idle-dots">
               <span /><span /><span />
             </div>

@@ -101,7 +101,7 @@ const NotFoundPage: React.FC = () => {
             fontWeight: 700,
             marginTop: '10px'
           }}>
-            <Camera size={16} /> Summer Splash 2026
+            <Camera size={16} /> Tatt n' Snap 2026
           </div>
         </div>
       </div>

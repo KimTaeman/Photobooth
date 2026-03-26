@@ -595,7 +595,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       <header style={{ background: 'white', padding: '24px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 12px rgba(59,130,246,0.06)', marginBottom: '32px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
           <h1 style={{ fontFamily: 'Fredoka, sans-serif', color: '#3B82F6', margin: 0, fontSize: '1.8rem' }}>Admin Dashboard</h1>
-          <p style={{ color: '#64748B', margin: '4px 0 0', fontSize: '0.85rem', fontWeight: 600 }}>Summer Splash Photobooth 2026</p>
+          <p style={{ color: '#64748B', margin: '4px 0 0', fontSize: '0.85rem', fontWeight: 600 }}>Tatt n' Snap 2026</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '50px', background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: 'white', fontFamily: 'Fredoka, sans-serif', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
