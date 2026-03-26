@@ -21,12 +21,16 @@ const SummerSplashPage: React.FC = () => {
     const markLoaded = (key: string) => setLoadedImgs(prev => new Set(prev).add(key));
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isDownloadingAll, setIsDownloadingAll] = useState(false);
-    const [theme, setTheme] = useState<'premium' | 'cute'>('premium');
+    const [theme, setTheme] = useState<'premium' | 'cute'>(() => {
+        return (localStorage.getItem('pb_theme') as 'premium' | 'cute') || 'premium';
+    });
 
     useEffect(() => {
         const fetchTheme = async () => {
             const savedTheme = await getSetting('theme', 'premium');
-            setTheme(savedTheme as 'premium' | 'cute');
+            const themeValue = savedTheme as 'premium' | 'cute';
+            setTheme(themeValue);
+            localStorage.setItem('pb_theme', themeValue);
         };
         fetchTheme();
     }, []);

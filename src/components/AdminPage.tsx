@@ -223,6 +223,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setTheme(value as 'premium' | 'cute');
       nextTheme = value as 'premium' | 'cute';
       msg = `Theme set to ${value}`;
+      localStorage.setItem('pb_theme', value as string);
     }
     if (key === 'enable_pdpa') {
       setEnablePdpa(value as boolean);

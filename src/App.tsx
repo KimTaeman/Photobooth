@@ -21,11 +21,18 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   const [sessionBursts, setSessionBursts] = useState<string[][]>([]);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [config, setConfig] = useState<RemoteConfig | null>(null);
+  const [theme, setTheme] = useState<'premium' | 'cute'>(() => {
+    return (localStorage.getItem('pb_theme') as 'premium' | 'cute') || 'premium';
+  });
 
   useEffect(() => {
     const fetchConfig = async () => {
       const remoteConfig = await getAllSettings();
       setConfig(remoteConfig);
+      if (remoteConfig.theme) {
+        setTheme(remoteConfig.theme);
+        localStorage.setItem('pb_theme', remoteConfig.theme);
+      }
     };
     fetchConfig();
 
@@ -79,7 +86,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   };
 
   return (
-    <div className={`app-container theme-${config?.theme || 'premium'}`}>
+    <div className={`app-container theme-${theme}`}>
       <Stickers config={config} />
       
       <LockScreen 
