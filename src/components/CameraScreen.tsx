@@ -566,6 +566,22 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
               alt="Frame Overlay"
             />
           )}
+          {selectedFrame === "/frame4.png" && (
+            <img
+              id="frame-overlay-top"
+              src="/frame4-transparent.png"
+              style={{
+                display: "block",
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: 11,
+                pointerEvents: "none",
+              }}
+              alt="Frame Overlay Top"
+            />
+          )}
           {countdown && (
             <div id="countdown-overlay" style={{ display: "flex", zIndex: 20 }}>
               {countdown}

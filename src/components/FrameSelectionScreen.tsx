@@ -70,7 +70,23 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
       <div className="frames-grid">
         {frames.map(frame => (
           <div key={frame.id} className={`frame-card ${selectedFrame === frame.image ? 'selected' : ''}`} onClick={() => onSelectFrame(frame.image)}>
-            <img src={frame.image} alt={frame.label} />
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '2480 / 1748' }}>
+              <img src={frame.image} alt={frame.label} style={{ width: '100%', display: 'block' }} />
+              {frame.image === '/frame4.png' && (
+                <img 
+                  src="/frame4-transparent.png" 
+                  alt={`${frame.label} Overlay`} 
+                  style={{ 
+                    position: 'absolute', 
+                    inset: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    zIndex: 2, 
+                    pointerEvents: 'none' 
+                  }} 
+                />
+              )}
+            </div>
             <div className="check">✓</div>
             <div className="frame-label">{frame.label}</div>
           </div>
@@ -126,7 +142,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
                 <div className="idle-title-image">
                   <img src="/taptostart.png" alt="Tap to Start" />
                 </div>
-                <p className="idle-subtitle">Tatt n' Snap Premium</p>
+                <p className="idle-subtitle"></p>
                 <div className="idle-dots">
                   <span /><span /><span />
                 </div>

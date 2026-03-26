@@ -470,6 +470,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} 
           />
         )}
+        {selectedPreviewFrame === '/frame4.png' && (
+          <img 
+            src="/frame4-transparent.png" 
+            alt="Preview Frame Overlay" 
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 3, pointerEvents: 'none' }} 
+          />
+        )}
         {/* Photo placeholders (black holes) */}
         {slots.map((s, i) => (
           <div key={i} style={{

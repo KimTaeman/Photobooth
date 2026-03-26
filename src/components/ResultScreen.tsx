@@ -162,8 +162,16 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     const w = 860, h = 606;
     
     const frameImg = await loadImage(frameUrl);
+    let frameOverlayImg: HTMLImageElement | null = null;
+    if (frameUrl === '/frame4.png') {
+      try {
+        frameOverlayImg = await loadImage('/frame4-transparent.png');
+      } catch {
+        console.warn('Failed to load frame4-transparent overlay');
+      }
+    }
 
-    let frames: string[] = [];
+    const frames: string[] = [];
     
     // Use preview-style coordinates for the GIF shots (central large rectangle)
     const pW = w * 0.726;
@@ -187,6 +195,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(frameImg, 0, 0, w, h);
           drawImageCover(ctx, shotBurstImgs[fi], pX, pY, pW, pH);
+          if (frameOverlayImg) {
+            ctx.drawImage(frameOverlayImg, 0, 0, w, h);
+          }
           frames.push(c.toDataURL('image/jpeg', 0.82));
         }
 
@@ -200,6 +211,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             ctx.fillRect(0, 0, w, h);
             ctx.drawImage(frameImg, 0, 0, w, h);
             drawImageCover(ctx, shotBurstImgs[fi], pX, pY, pW, pH);
+            if (frameOverlayImg) {
+              ctx.drawImage(frameOverlayImg, 0, 0, w, h);
+            }
             frames.push(c.toDataURL('image/jpeg', 0.82));
           }
         }
@@ -215,6 +229,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(frameImg, 0, 0, w, h);
         drawImageCover(ctx, photoImgs[i], pX, pY, pW, pH);
+        if (frameOverlayImg) {
+          ctx.drawImage(frameOverlayImg, 0, 0, w, h);
+        }
         
         // Add multiple frames for each static photo to create a pause
         const dataUrl = c.toDataURL('image/jpeg', 0.85);
@@ -235,7 +252,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
 
   const processAndUpload = async () => {
     const sessionId = `session_${Date.now()}`;
-    let hasVideo = !!videoBlob;
+    const hasVideo = !!videoBlob;
 
     try {
       setUploadStatus('Processing memories...');
@@ -259,6 +276,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
       ctx.drawImage(frameImg, 0, 0, 2480, 1748);
       ctx.restore();
 
+      let frameOverlayImg: HTMLImageElement | null = null;
+      if (selectedFrame === '/frame4.png') {
+        try {
+          frameOverlayImg = await loadImage('/frame4-transparent.png');
+        } catch {
+          console.warn('Failed to load frame4-transparent overlay');
+        }
+      }
+
       const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) || config?.layout2x2 || { margin: 60, gutterX: 40, gutterY: 40, slotW: 1160, slotH: 794 };
       const { margin, gutterX, gutterY, slotW, slotH } = layout;
       const coords = [
@@ -276,6 +302,14 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         drawImageCover(ctx, img, coords[i].x, coords[i].y, slotW, slotH);
         ctx.restore();
       });
+
+      if (frameOverlayImg) {
+        ctx.save();
+        ctx.filter = 'none';
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(frameOverlayImg, 0, 0, 2480, 1748);
+        ctx.restore();
+      }
 
       const finalPhotoBlob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.95)
@@ -296,7 +330,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           const blob = await response.blob();
           try {
             await uploadToCloudinary(blob, 'image', `${sessionId}_shot_${i + 1}`);
-          } catch (e) {
+          } catch {
             await addToQueue(blob, 'image', `${sessionId}_shot_${i + 1}`, sessionId);
           }
         }),
@@ -305,7 +339,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           try {
             await uploadToCloudinary(finalPhotoBlob, 'image', `${sessionId}_final`);
             await logSession(sessionId, selectedFrame, hasVideo);
-          } catch (e) {
+          } catch {
             await addToQueue(finalPhotoBlob, 'image', `${sessionId}_final`, sessionId, { frame: selectedFrame, hasVideo });
             setIsOfflineMode(true);
           }
@@ -314,7 +348,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         (async () => {
           try {
             await uploadToCloudinary(gifBlob, 'image', `${sessionId}_clip`);
-          } catch (e) {
+          } catch {
             await addToQueue(gifBlob, 'image', `${sessionId}_clip`, sessionId);
           }
         })()
@@ -324,7 +358,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         uploadTasks.push((async () => {
           try {
             await uploadToCloudinary(videoBlob, 'video', `${sessionId}_video`);
-          } catch (e) {
+          } catch {
             await addToQueue(videoBlob, 'video', `${sessionId}_video`, sessionId);
           }
         })());
