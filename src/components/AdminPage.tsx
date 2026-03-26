@@ -571,6 +571,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const withVideo = sessions.filter(s => s.has_video).length;
   const frame1Count = sessions.filter(s => s.frame?.includes('frame1')).length;
   const frame2Count = sessions.filter(s => s.frame?.includes('frame2')).length;
+  const frame3Count = sessions.filter(s => s.frame?.includes('frame3')).length;
+  const frame4Count = sessions.filter(s => s.frame?.includes('frame4')).length;
   const byHour = Array(24).fill(0);
   sessions.forEach(s => { byHour[new Date(s.created_at).getHours()]++; });
   const maxHourly = Math.max(...byHour, 1);
@@ -629,6 +631,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
               {statCard(<Film size={22} />, 'With Video', withVideo)}
               {statCard(<Camera size={22} />, 'Frame 1', frame1Count)}
               {statCard(<Camera size={22} />, 'Frame 2', frame2Count)}
+              {statCard(<Camera size={22} />, 'Frame 3', frame3Count)}
+              {statCard(<Camera size={22} />, 'Frame 4', frame4Count)}
             </div>
 
             {/* Application Settings */}
