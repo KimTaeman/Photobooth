@@ -40,6 +40,7 @@ export async function getSetting(key: string, defaultValue: string): Promise<str
 
 export interface RemoteConfig {
     eventTheme: string;
+    theme: 'premium' | 'cute';
     availableFrames: string[];
     countdownDuration: number;
     captureDelay: number;
@@ -83,6 +84,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
 
         return {
             eventTheme: settingsMap['event_theme'] || 'summer-splash',
+            theme: (settingsMap['theme'] as 'premium' | 'cute') || 'premium',
             availableFrames: settingsMap['available_frames'] ? JSON.parse(settingsMap['available_frames']) : defaultFrames,
             countdownDuration: parseInt(settingsMap['countdown_duration'] || '5'),
             captureDelay: parseInt(settingsMap['capture_delay'] || '3'),
@@ -100,6 +102,7 @@ export async function getAllSettings(): Promise<RemoteConfig> {
         console.error('Error fetching all settings:', err);
         return {
             eventTheme: 'summer-splash',
+            theme: 'premium',
             availableFrames: defaultFrames,
             countdownDuration: 5,
             captureDelay: 3,

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, RefreshCw, Printer, Download, AlertCircle, Info } from 'lucide-react';
+import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, RefreshCw, Printer, Download, AlertCircle, Info, Layout } from 'lucide-react';
 import heroImg from '../assets/jin.jpg';
 const filterPrevImg = heroImg;
 
@@ -42,6 +42,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('none');
   const [enableVideo, setEnableVideo] = useState(true);
+  const [theme, setTheme] = useState<'premium' | 'cute'>('premium');
   const [enablePdpa, setEnablePdpa] = useState(false);
   const [enableStickers, setEnableStickers] = useState(true);
   const [enableBoomerang, setEnableBoomerang] = useState(true);
@@ -89,10 +90,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sessionsRes, filterSetting, videoSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, boomerangSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
+      const [sessionsRes, filterSetting, videoSetting, themeSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, boomerangSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
         getSetting('active_filter', 'none'),
         getSetting('enable_video', 'true'),
+        getSetting('theme', 'premium'),
         getSetting('enable_pdpa', 'false'),
         getSetting('pdpa_text_en', 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.'),
         getSetting('pdpa_text_th', 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้'),
@@ -111,6 +113,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setSessions((sessionsRes.data as Session[]) || []);
       setActiveFilter(filterSetting);
       setEnableVideo(videoSetting === 'true');
+      setTheme((themeSetting as 'premium' | 'cute') || 'premium');
       setEnablePdpa(pdpaSetting === 'true');
       setEnableStickers(stickersSetting === 'true');
       setEnableBoomerang(boomerangSetting === 'true');
@@ -196,6 +199,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const handleUpdateSetting = (key: string, value: string | boolean | number) => {
     let nextActiveFilter = activeFilter;
     let nextEnableVideo = enableVideo;
+    let nextTheme = theme;
     let nextEnablePdpa = enablePdpa;
     let nextEnableStickers = enableStickers;
     let nextEnableBoomerang = enableBoomerang;
@@ -214,6 +218,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setEnableVideo(value as boolean);
       nextEnableVideo = value as boolean;
       msg = `Video recording ${value ? 'enabled' : 'disabled'}`;
+    }
+    if (key === 'theme') {
+      setTheme(value as 'premium' | 'cute');
+      nextTheme = value as 'premium' | 'cute';
+      msg = `Theme set to ${value}`;
     }
     if (key === 'enable_pdpa') {
       setEnablePdpa(value as boolean);
@@ -261,6 +270,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       triggerAutoSave({
         active_filter: nextActiveFilter,
         enable_video: nextEnableVideo,
+        theme: nextTheme,
         enable_pdpa: nextEnablePdpa,
         enable_stickers: nextEnableStickers,
         enable_boomerang: nextEnableBoomerang,
@@ -278,6 +288,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     saveSettingsToDB({
       active_filter: activeFilter,
       enable_video: enableVideo,
+      theme: theme,
       enable_pdpa: enablePdpa,
       enable_stickers: enableStickers,
       enable_boomerang: enableBoomerang,
@@ -674,6 +685,27 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                           style={{ width: '44px', height: '24px', borderRadius: '12px', background: enableVideo ? '#3B82F6' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
                         >
                           <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enableVideo ? '23px' : '3px', transition: 'all 0.2s' }} />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Photobooth Theme</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {(['premium', 'cute'] as const).map(t => (
+                            <button
+                              key={t}
+                              onClick={() => handleUpdateSetting('theme', t)}
+                              style={{ 
+                                flex: 1, padding: '8px', borderRadius: '10px', 
+                                border: `2px solid ${theme === t ? '#3B82F6' : '#E2E8F0'}`,
+                                background: theme === t ? '#EFF6FF' : 'white',
+                                color: theme === t ? '#3B82F6' : '#64748B',
+                                fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {t === 'premium' ? '💎 Premium' : '✨ Cute'}
+                            </button>
+                          ))}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

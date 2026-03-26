@@ -95,19 +95,44 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
 
       {isIdle && (
         <div className={`idle-overlay ${isSplashing ? 'splashing' : ''}`} onClick={handleIdleTap}>
-          <div className="idle-blob idle-blob-1" />
-          <div className="idle-blob idle-blob-2" />
-          <div className="idle-blob idle-blob-3" />
-          <div className="idle-content">
-            <div className="idle-logo-container">
-              <img src={logo} alt="Logo" className="idle-logo" />
-            </div>
-            <h2 className="idle-title">Tap to Start!</h2>
-            <p className="idle-subtitle">Summer Splash Photobooth</p>
-            <div className="idle-dots">
-              <span /><span /><span />
-            </div>
-          </div>
+          {config?.theme === 'cute' ? (
+            <>
+              <div className="idle-blob idle-blob-1" />
+              <div className="idle-blob idle-blob-2" />
+              <div className="idle-blob idle-blob-3" />
+              <div className="idle-content">
+                <div className="idle-logo-container">
+                  <img src={logo} alt="Logo" className="idle-logo" />
+                </div>
+                <h2 className="idle-title">Tap to<br />Start!</h2>
+                <p className="idle-subtitle">Summer Splash Photobooth</p>
+                <div className="idle-dots">
+                  <span /><span /><span />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="idle-illustration illustration-tl">
+                <img src="/cam.png" alt="Camera Drawing" />
+              </div>
+              <div className="idle-illustration illustration-br">
+                <img src="/tatt.png" alt="Tattoo Drawing" />
+              </div>
+              <div className="idle-content">
+                <div className="idle-logo-container">
+                  <img src={logo} alt="Logo" className="idle-logo" />
+                </div>
+                <div className="idle-title-image">
+                  <img src="/taptostart.png" alt="Tap to Start" />
+                </div>
+                <p className="idle-subtitle">Tatt n' Snap Premium</p>
+                <div className="idle-dots">
+                  <span /><span /><span />
+                </div>
+              </div>
+            </>
+          )}
           {isSplashing && <div className="water-splash-effect" />}
         </div>
       )}
