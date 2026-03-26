@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, PASSWORD_HASH, sha256, getSetting, updateSetting } from '../hooks/useSupabase';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
-import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, RefreshCw, Printer, Download, AlertCircle, Info, Layout } from 'lucide-react';
+import { BarChart2, Camera, Film, Users, Clock, LockOpen, LogOut, Settings, Filter, Save, CheckCircle, LayoutTemplate, Trash2, ShieldCheck, RefreshCw, Printer, Download, AlertCircle, Info } from 'lucide-react';
 import heroImg from '../assets/jin.jpg';
 const filterPrevImg = heroImg;
 
@@ -699,23 +699,37 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                         </div>
                       </div>
                       <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Photobooth Theme</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '12px' }}>Photobooth Theme</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                           {(['premium', 'cute'] as const).map(t => (
-                            <button
+                            <div
                               key={t}
                               onClick={() => handleUpdateSetting('theme', t)}
                               style={{ 
-                                flex: 1, padding: '8px', borderRadius: '10px', 
-                                border: `2px solid ${theme === t ? '#3B82F6' : '#E2E8F0'}`,
-                                background: theme === t ? '#EFF6FF' : 'white',
-                                color: theme === t ? '#3B82F6' : '#64748B',
-                                fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-                                textTransform: 'capitalize'
+                                padding: '10px', borderRadius: '16px', 
+                                border: `2px solid ${theme === t ? '#3B82F6' : '#F1F5F9'}`,
+                                background: theme === t ? '#F0F9FF' : 'white',
+                                cursor: 'pointer', transition: 'all 0.2s',
+                                display: 'flex', flexDirection: 'column', gap: '8px'
                               }}
                             >
-                              {t === 'premium' ? '💎 Premium' : '✨ Cute'}
-                            </button>
+                              <div style={{ 
+                                width: '100%', aspectRatio: '16/9', borderRadius: '8px', 
+                                backgroundImage: `url(/idle-${t}.png)`, 
+                                backgroundSize: 'cover', backgroundPosition: 'center',
+                                border: '1px solid #E2E8F0'
+                              }} />
+                              <div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: theme === t ? '#1E3A5F' : '#64748B', marginBottom: '4px' }}>
+                                  {t === 'premium' ? '💎 Premium' : '✨ Cute'}
+                                </div>
+                                <p style={{ fontSize: '0.7rem', color: '#94A3B8', margin: 0, lineHeight: '1.3' }}>
+                                  {t === 'premium' 
+                                    ? 'Elegant, minimalist design with gold accents and dark mode. Ideal for formal events.' 
+                                    : 'Fun, vibrant design with light gradients and playful blobs. Perfect for parties!'}
+                                </p>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>

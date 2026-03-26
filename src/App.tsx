@@ -79,7 +79,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   };
 
   return (
-    <div className={`app-container theme-${config?.eventTheme || 'default'}`}>
+    <div className={`app-container theme-${config?.theme || 'premium'}`}>
       <Stickers config={config} />
       
       <LockScreen 

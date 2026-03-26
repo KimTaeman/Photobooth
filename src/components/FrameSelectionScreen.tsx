@@ -30,18 +30,38 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
     label: `Frame ${i + 1}`
   }));
 
+  const [splashes, setSplashes] = useState<{ id: number; x: number; y: number }[]>([]);
+  const splashIdRef = useRef(0);
+
   const resetIdleTimer = useCallback(() => {
+    // console.log('Resetting idle timer');
     setIsIdle(false);
     setIsSplashing(false);
+    setSplashes([]);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => setIsIdle(true), 30000);
+    idleTimerRef.current = setTimeout(() => {
+      // console.log('Idle screen active');
+      setIsIdle(true);
+    }, 30000);
   }, []);
 
-  const handleIdleTap = () => {
+  const handleIdleTap = (e: React.MouseEvent | React.TouchEvent) => {
+    const charX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const charY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const newSplash = { id: splashIdRef.current++, x: charX, y: charY };
+    setSplashes(prev => [...prev, newSplash]);
     setIsSplashing(true);
+
+    // Remove splash after animation
+    setTimeout(() => {
+      setSplashes(prev => prev.filter(s => s.id !== newSplash.id));
+    }, 800);
+
+    // Transition to main screen after a short delay if it's the first tap or after animation
     setTimeout(() => {
       resetIdleTimer();
-    }, 800);
+    }, 600);
   };
 
   useEffect(() => {
@@ -113,6 +133,17 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
         <div className={`idle-overlay ${isSplashing ? 'splashing' : ''}`} onClick={handleIdleTap}>
           {config?.theme === 'cute' ? (
             <>
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  inset: 0, 
+                  backgroundImage: 'url("/background.png")', 
+                  backgroundSize: 'cover', 
+                  backgroundPosition: 'center',
+                  opacity: 0.4,
+                  zIndex: 0
+                }} 
+              />
               <div className="idle-blob idle-blob-1" />
               <div className="idle-blob idle-blob-2" />
               <div className="idle-blob idle-blob-3" />
@@ -149,7 +180,13 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
               </div>
             </>
           )}
-          {isSplashing && <div className="water-splash-effect" />}
+          {splashes.map(s => (
+            <div 
+              key={s.id} 
+              className="water-splash-effect" 
+              style={{ left: s.x, top: s.y }} 
+            />
+          ))}
         </div>
       )}
     </div>
