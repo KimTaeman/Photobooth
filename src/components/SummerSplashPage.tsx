@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Film, Image, Camera, Share2, Heart, Clock, AlertCircle, Clapperboard, Home } from 'lucide-react';
 import { CLOUDINARY_CLOUD_NAME } from '../hooks/useCloudinary';
@@ -405,7 +405,7 @@ const SummerSplashPage: React.FC = () => {
                         </div>
                         <a href={videoDownloadUrl || '#'} download="SummerSplash_Video.mp4" className="btn btn-blue" style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                            padding: '16px 20px', borderRadius: '50px', border: 'none',
+                            padding: '16px 20px', borderRadius: '50px',
                             background: isPremium ? 'transparent' : '#3B82F6', 
                             border: isPremium ? '2px solid #D4AF37' : 'none',
                             color: isPremium ? '#D4AF37' : 'white', 

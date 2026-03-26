@@ -23,7 +23,7 @@ export const useLUT = () => {
       canvas.width = img.width;
       canvas.height = img.height;
       // Force sRGB to prevent browser color management from shifting LUT values
-      const ctx = canvas.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' as CanvasColorSpace });
+      const ctx = canvas.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' } as any) as CanvasRenderingContext2D | null;
       if (!ctx) return null;
       ctx.drawImage(img, 0, 0);
       const data = ctx.getImageData(0, 0, img.width, img.height);
