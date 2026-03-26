@@ -160,21 +160,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     const { createGIF } = await import('gifshot');
     // Strip layout: A5 landscape (2480x1748) scaled down to 860x606 for GIF
     const w = 860, h = 606;
-    const ratio = w / 2480;
     
-    const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) || config?.layout2x2 || { margin: 60, gutterX: 40, gutterY: 40, slotW: 1160, slotH: 794 };
-    const slotW = layout.slotW * ratio;
-    const slotH = layout.slotH * ratio;
-    const margin = layout.margin * ratio;
-    const gX = layout.gutterX * ratio;
-    const gY = layout.gutterY * ratio;
-
-    const coords = [
-      { x: margin, y: margin }, 
-      { x: margin + slotW + gX, y: margin },
-      { x: margin, y: margin + slotH + gY }, 
-      { x: margin + slotW + gX, y: margin + slotH + gY },
-    ];
     const frameImg = await loadImage(frameUrl);
 
     let frames: string[] = [];
