@@ -70,7 +70,6 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
 
   const { loadLUT, applyLUT } = useLUT();
 
-  const testMode = config?.testMode ?? false;
   const enableVideo = config?.enableVideo ?? true;
   const activeFilter = config?.activeFilter ?? "none";
   const layout = (selectedFrame && config?.frameLayouts?.[selectedFrame]) ||
@@ -438,7 +437,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
 
       while (decision === "retake") {
         setStatus(`Pose! Shot ${i} of 4`);
-        const countdownStart = testMode ? 2 : config?.countdownDuration || 10;
+        const countdownStart = config?.countdownDuration || 10;
         for (let count = countdownStart; count > 0; count--) {
           setCountdown(count);
           playTick();
@@ -475,7 +474,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
       setCapturedPhotos((prev) => [...prev, photoUrl]);
       if (i < 4)
         await new Promise((r) =>
-          setTimeout(r, testMode ? 200 : (config?.captureDelay || 1) * 1000),
+          setTimeout(r, (config?.captureDelay || 1) * 1000),
         );
     }
 

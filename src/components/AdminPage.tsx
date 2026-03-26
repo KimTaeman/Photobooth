@@ -42,7 +42,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('none');
   const [enableVideo, setEnableVideo] = useState(true);
-  const [testMode, setTestMode] = useState(false);
   const [enablePdpa, setEnablePdpa] = useState(false);
   const [enableStickers, setEnableStickers] = useState(true);
   const [enableBoomerang, setEnableBoomerang] = useState(true);
@@ -52,7 +51,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const [layout2x2, setLayout2x2] = useState(DEFAULT_LAYOUT);
   const [frameLayouts, setFrameLayouts] = useState<Record<string, typeof layout2x2>>({});
   const [selectedPreviewFrame, setSelectedPreviewFrame] = useState<string | null>(null);
-  const [availableFrames, setAvailableFrames] = useState<string[]>(['/frame1.png', '/frame2.png', '/frame3.png']);
+  const [availableFrames, setAvailableFrames] = useState<string[]>(['/frame1.png', '/frame2.png', '/frame3.png', '/frame4.png']);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -90,11 +89,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sessionsRes, filterSetting, videoSetting, testModeSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, boomerangSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
+      const [sessionsRes, filterSetting, videoSetting, pdpaSetting, pdpaEnSetting, pdpaThSetting, stickersSetting, boomerangSetting, countdownSetting, layoutSetting, framesSetting, frameLayoutsSetting, logsRes] = await Promise.all([
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
         getSetting('active_filter', 'none'),
         getSetting('enable_video', 'true'),
-        getSetting('test_mode', 'false'),
         getSetting('enable_pdpa', 'false'),
         getSetting('pdpa_text_en', 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.'),
         getSetting('pdpa_text_th', 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้'),
@@ -102,7 +100,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         getSetting('enable_boomerang', 'true'),
         getSetting('countdown_duration', '10'),
         getSetting('layout_2x2', JSON.stringify(DEFAULT_LAYOUT)),
-        getSetting('available_frames', JSON.stringify(['/frame1.png', '/frame2.png', '/frame3.png'])),
+        getSetting('available_frames', JSON.stringify(['/frame1.png', '/frame2.png', '/frame3.png', '/frame4.png'])),
         getSetting('frame_layouts', '{}'),
         supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(10)
       ]);
@@ -113,7 +111,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setSessions((sessionsRes.data as Session[]) || []);
       setActiveFilter(filterSetting);
       setEnableVideo(videoSetting === 'true');
-      setTestMode(testModeSetting === 'true');
       setEnablePdpa(pdpaSetting === 'true');
       setEnableStickers(stickersSetting === 'true');
       setEnableBoomerang(boomerangSetting === 'true');
@@ -199,7 +196,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
   const handleUpdateSetting = (key: string, value: string | boolean | number) => {
     let nextActiveFilter = activeFilter;
     let nextEnableVideo = enableVideo;
-    let nextTestMode = testMode;
     let nextEnablePdpa = enablePdpa;
     let nextEnableStickers = enableStickers;
     let nextEnableBoomerang = enableBoomerang;
@@ -218,11 +214,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       setEnableVideo(value as boolean);
       nextEnableVideo = value as boolean;
       msg = `Video recording ${value ? 'enabled' : 'disabled'}`;
-    }
-    if (key === 'test_mode') {
-      setTestMode(value as boolean);
-      nextTestMode = value as boolean;
-      msg = `Test mode ${value ? 'turned on' : 'turned off'}`;
     }
     if (key === 'enable_pdpa') {
       setEnablePdpa(value as boolean);
@@ -270,7 +261,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
       triggerAutoSave({
         active_filter: nextActiveFilter,
         enable_video: nextEnableVideo,
-        test_mode: nextTestMode,
         enable_pdpa: nextEnablePdpa,
         enable_stickers: nextEnableStickers,
         enable_boomerang: nextEnableBoomerang,
@@ -288,7 +278,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
     saveSettingsToDB({
       active_filter: activeFilter,
       enable_video: enableVideo,
-      test_mode: testMode,
       enable_pdpa: enablePdpa,
       enable_stickers: enableStickers,
       enable_boomerang: enableBoomerang,
@@ -685,15 +674,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                           style={{ width: '44px', height: '24px', borderRadius: '12px', background: enableVideo ? '#3B82F6' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
                         >
                           <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: enableVideo ? '23px' : '3px', transition: 'all 0.2s' }} />
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.9rem', color: '#1E3A5F', fontWeight: 600 }}>Test Mode (Fast Countdowns)</span>
-                        <div 
-                          onClick={() => handleUpdateSetting('test_mode', !testMode)}
-                          style={{ width: '44px', height: '24px', borderRadius: '12px', background: testMode ? '#F59E0B' : '#E2E8F0', position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}
-                        >
-                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: testMode ? '23px' : '3px', transition: 'all 0.2s' }} />
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

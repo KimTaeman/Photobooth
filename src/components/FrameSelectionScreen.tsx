@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Palette, Camera, Sun } from 'lucide-react';
+import { Palette, Camera } from 'lucide-react';
 import logo from '../assets/logo.png';
 import type { RemoteConfig } from '../hooks/useSupabase';
 
@@ -17,10 +17,11 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   isActive, 
   selectedFrame, 
   onSelectFrame,
-  availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png'],
+  availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png', '/frame4.png'],
   config
 }) => {
   const [isIdle, setIsIdle] = useState(false);
+  const [isSplashing, setIsSplashing] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const frames = availableFrames.map((f, i) => ({
@@ -31,13 +32,21 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
 
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
+    setIsSplashing(false);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => setIsIdle(true), 30000);
   }, []);
 
+  const handleIdleTap = () => {
+    setIsSplashing(true);
+    setTimeout(() => {
+      resetIdleTimer();
+    }, 800);
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isActive) { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); setIsIdle(false); return; }
+    if (!isActive) { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); setIsIdle(false); setIsSplashing(false); return; }
     resetIdleTimer();
     const events = ['mousemove', 'mousedown', 'touchstart', 'keydown'] as const;
     events.forEach(e => window.addEventListener(e, resetIdleTimer));
@@ -85,18 +94,21 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
       )}
 
       {isIdle && (
-        <div className="idle-overlay" onClick={resetIdleTimer}>
+        <div className={`idle-overlay ${isSplashing ? 'splashing' : ''}`} onClick={handleIdleTap}>
           <div className="idle-blob idle-blob-1" />
           <div className="idle-blob idle-blob-2" />
           <div className="idle-blob idle-blob-3" />
           <div className="idle-content">
-            <div className="idle-sun"><Sun size={72} strokeWidth={1.5} /></div>
+            <div className="idle-logo-container">
+              <img src={logo} alt="Logo" className="idle-logo" />
+            </div>
             <h2 className="idle-title">Tap to Start!</h2>
-            <p className="idle-subtitle">Create your Tatt n' Snap memories</p>
+            <p className="idle-subtitle">Summer Splash Photobooth</p>
             <div className="idle-dots">
               <span /><span /><span />
             </div>
           </div>
+          {isSplashing && <div className="water-splash-effect" />}
         </div>
       )}
     </div>

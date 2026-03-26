@@ -177,83 +177,68 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
     ];
     const frameImg = await loadImage(frameUrl);
 
-    let frames: string[];
+    let frames: string[] = [];
+    
+    // Use preview-style coordinates for the GIF shots (central large rectangle)
+    const pW = w * 0.726;
+    const pH = h * 0.703;
+    const pX = (w - pW) / 2;
+    const pY = (h - pH) / 2;
 
     if (bursts && bursts.length === 4 && bursts[0]?.length > 0) {
-      // Action GIF: each slot animates through its burst frames simultaneously
+      // Action GIF: show one shot's burst at a time in the central area
       const burstLen = bursts[0].length;
-      const burstImgs = await Promise.all(bursts.map(burst => Promise.all(burst.map(loadImage))));
-      frames = [];
-      for (let fi = 0; fi < burstLen; fi++) {
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        const ctx = c.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
+      
+      for (let si = 0; si < 4; si++) {
+        const shotBurstImgs = await Promise.all(bursts[si].map(loadImage));
         
-        // Draw frame first
-        ctx.filter = 'none';
-        ctx.drawImage(frameImg, 0, 0, w, h);
-
-        for (let si = 0; si < 4; si++) {
-          const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
-          if (img) {
-            ctx.filter = 'none';
-            drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
-          }
-        }
-        frames.push(c.toDataURL('image/jpeg', 0.82));
-      }
-      // Hold last frame
-      frames.push(frames[frames.length - 1], frames[frames.length - 1]);
-
-      // Boomerang: append frames in reverse (skip first and last to avoid duplicate)
-      if (config?.enableBoomerang !== false) {
-        for (let fi = burstLen - 2; fi >= 1; fi--) {
+        // Forward burst for this shot
+        for (let fi = 0; fi < burstLen; fi++) {
           const c = document.createElement('canvas');
           c.width = w; c.height = h;
           const ctx = c.getContext('2d')!;
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, w, h);
-          ctx.filter = 'none';
           ctx.drawImage(frameImg, 0, 0, w, h);
-          for (let si = 0; si < 4; si++) {
-            const img = burstImgs[si]?.[fi] ?? burstImgs[si]?.[burstImgs[si].length - 1];
-            if (img) {
-              ctx.filter = 'none';
-              drawImageCover(ctx, img, coords[si].x, coords[si].y, slotW, slotH);
-            }
-          }
+          drawImageCover(ctx, shotBurstImgs[fi], pX, pY, pW, pH);
           frames.push(c.toDataURL('image/jpeg', 0.82));
+        }
+
+        // Boomerang for this shot if enabled
+        if (config?.enableBoomerang !== false) {
+          for (let fi = burstLen - 2; fi >= 1; fi--) {
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d')!;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(frameImg, 0, 0, w, h);
+            drawImageCover(ctx, shotBurstImgs[fi], pX, pY, pW, pH);
+            frames.push(c.toDataURL('image/jpeg', 0.82));
+          }
         }
       }
     } else {
-      // Fallback: progressive reveal with static photos
+      // Fallback: show one static photo at a time in the central area
       const photoImgs = await Promise.all(photoUrls.map(loadImage));
-      frames = [];
       for (let i = 0; i < 4; i++) {
         const c = document.createElement('canvas');
         c.width = w; c.height = h;
         const ctx = c.getContext('2d')!;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
-
-        // Draw frame first
-        ctx.filter = 'none';
         ctx.drawImage(frameImg, 0, 0, w, h);
-
-        for (let j = 0; j <= i; j++) {
-          ctx.filter = 'none';
-          drawImageCover(ctx, photoImgs[j], coords[j].x, coords[j].y, slotW, slotH);
-        }
-        frames.push(c.toDataURL('image/jpeg', 0.85));
+        drawImageCover(ctx, photoImgs[i], pX, pY, pW, pH);
+        
+        // Add multiple frames for each static photo to create a pause
+        const dataUrl = c.toDataURL('image/jpeg', 0.85);
+        for (let j = 0; j < 5; j++) frames.push(dataUrl);
       }
-      frames.push(frames[3], frames[3]);
     }
 
     return new Promise((resolve, reject) => {
       createGIF(
-        { images: frames, gifWidth: w, gifHeight: h, interval: bursts ? 0.12 : 0.5 },
+        { images: frames, gifWidth: w, gifHeight: h, interval: bursts ? 0.08 : 0.2 },
         (obj) => {
           if (obj.error) { reject(new Error(obj.errorMsg || 'GIF generation failed')); return; }
           fetch(obj.image).then(r => r.blob()).then(resolve).catch(reject);

@@ -45,7 +45,6 @@ export interface RemoteConfig {
     captureDelay: number;
     enableVideo: boolean;
     activeFilter: string;
-    testMode: boolean;
     enablePdpa: boolean;
     pdpaTextEn: string;
     pdpaTextTh: string;
@@ -68,7 +67,7 @@ export interface RemoteConfig {
 }
 
 export async function getAllSettings(): Promise<RemoteConfig> {
-    const defaultFrames = ['/frame1.png', '/frame2.png', '/frame3.png'];
+    const defaultFrames = ['/frame1.png', '/frame2.png', '/frame3.png', '/frame4.png'];
     const defaultLayout = { margin: 210, gutterX: 70, gutterY: 73, slotW: 995, slotH: 681 };
     const defaultPdpaTh = 'โดยการคลิก "เริ่ม" คุณตกลงที่จะยอมรับนโยบายความเป็นส่วนตัวของเราและยินยอมให้มีการเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลของคุณ (รูปภาพ) เพื่อวัตถุประสงค์ในการให้บริการนี้';
     const defaultPdpaEn = 'By clicking "Start", you agree to our privacy policy and consent to the collection and use of your personal data (photos) for the purpose of providing this service.';
@@ -89,7 +88,6 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             captureDelay: parseInt(settingsMap['capture_delay'] || '3'),
             enableVideo: settingsMap['enable_video'] === 'true',
             activeFilter: settingsMap['active_filter'] || 'none',
-            testMode: settingsMap['test_mode'] === 'true',
             enablePdpa: settingsMap['enable_pdpa'] === 'true',
             pdpaTextEn: settingsMap['pdpa_text_en'] || defaultPdpaEn,
             pdpaTextTh: settingsMap['pdpa_text_th'] || defaultPdpaTh,
@@ -107,7 +105,6 @@ export async function getAllSettings(): Promise<RemoteConfig> {
             captureDelay: 3,
             enableVideo: true,
             activeFilter: 'none',
-            testMode: false,
             enablePdpa: false,
             pdpaTextEn: defaultPdpaEn,
             pdpaTextTh: defaultPdpaTh,
