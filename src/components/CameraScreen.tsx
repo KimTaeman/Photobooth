@@ -107,7 +107,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
           },
           audio: false,
         });
-      } catch (e) {
+      } catch {
         // Fallback to standard 720p
         try {
           s = await navigator.mediaDevices.getUserMedia({
@@ -118,7 +118,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
             },
             audio: false,
           });
-        } catch (e2) {
+        } catch {
           // Absolute fallback
           s = await navigator.mediaDevices.getUserMedia({
             video: true,

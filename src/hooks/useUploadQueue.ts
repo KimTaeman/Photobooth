@@ -18,19 +18,49 @@ export interface QueuedUpload {
   filename: string;
   localPath: string;
   retryCount: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 const QUEUE_DIR = 'upload_queue';
 const METADATA_FILE = 'queue_metadata.json';
 const MAX_RETRIES = 5;
 
-const isTauri = () => !!(window as any).__TAURI_INTERNALS__;
+const isTauri = () => !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
 export function useUploadQueue() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
+
+  const getMetadata = useCallback(async (): Promise<QueuedUpload[]> => {
+    if (!isTauri()) return [];
+    try {
+      const metadataExists = await exists(METADATA_FILE, { baseDir: BaseDirectory.AppCache });
+      if (!metadataExists) return [];
+      const content = await readFile(METADATA_FILE, { baseDir: BaseDirectory.AppCache });
+      return JSON.parse(new TextDecoder().decode(content));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const saveMetadata = useCallback(async (metadata: QueuedUpload[]) => {
+    if (!isTauri()) return;
+    const content = new TextEncoder().encode(JSON.stringify(metadata));
+    await writeFile(METADATA_FILE, content, { baseDir: BaseDirectory.AppCache });
+  }, []);
+
+  const updatePendingCount = useCallback(async () => {
+    if (!isTauri()) return;
+    try {
+      const metadata = await getMetadata();
+      setPendingCount(metadata.filter(item => item.retryCount < MAX_RETRIES).length);
+      setFailedCount(metadata.filter(item => item.retryCount >= MAX_RETRIES).length);
+    } catch {
+      setPendingCount(0);
+      setFailedCount(0);
+    }
+  }, [getMetadata]);
 
   // Initialize the queue directory
   const initQueue = useCallback(async () => {
@@ -44,44 +74,14 @@ export function useUploadQueue() {
     } catch (err) {
       console.error('Failed to initialize upload queue:', err);
     }
-  }, []);
-
-  const updatePendingCount = useCallback(async () => {
-    if (!isTauri()) return;
-    try {
-      const metadata = await getMetadata();
-      setPendingCount(metadata.filter(item => item.retryCount < MAX_RETRIES).length);
-      setFailedCount(metadata.filter(item => item.retryCount >= MAX_RETRIES).length);
-    } catch (err) {
-      setPendingCount(0);
-      setFailedCount(0);
-    }
-  }, []);
-
-  const getMetadata = async (): Promise<QueuedUpload[]> => {
-    if (!isTauri()) return [];
-    try {
-      const metadataExists = await exists(METADATA_FILE, { baseDir: BaseDirectory.AppCache });
-      if (!metadataExists) return [];
-      const content = await readFile(METADATA_FILE, { baseDir: BaseDirectory.AppCache });
-      return JSON.parse(new TextDecoder().decode(content));
-    } catch (err) {
-      return [];
-    }
-  };
-
-  const saveMetadata = async (metadata: QueuedUpload[]) => {
-    if (!isTauri()) return;
-    const content = new TextEncoder().encode(JSON.stringify(metadata));
-    await writeFile(METADATA_FILE, content, { baseDir: BaseDirectory.AppCache });
-  };
+  }, [updatePendingCount]);
 
   const addToQueue = async (
     blob: Blob, 
     resourceType: 'image' | 'video' | 'raw', 
     filename: string, 
     sessionId: string,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ) => {
     if (!isTauri()) {
         console.warn('Local queue skipped: Not in Tauri environment');
@@ -152,7 +152,8 @@ export function useUploadQueue() {
         
         // If it was the final session log that failed
         if (item.filename.endsWith('_final')) {
-            await logSession(item.sessionId, item.metadata?.frame || null, item.metadata?.hasVideo || false);
+            const meta = item.metadata;
+            await logSession(item.sessionId, (meta?.frame as string) || null, (meta?.hasVideo as boolean) || false);
         }
 
         // Success: mark for removal
@@ -170,12 +171,14 @@ export function useUploadQueue() {
     await saveMetadata(finalMetadata);
     await updatePendingCount();
     setIsProcessing(false);
-  }, [isProcessing, updatePendingCount]);
+  }, [isProcessing, updatePendingCount, getMetadata, saveMetadata]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     initQueue();
     
     // Process queue on mount and when coming back online
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     processQueue();
     
     window.addEventListener('online', processQueue);

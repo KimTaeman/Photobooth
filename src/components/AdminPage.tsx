@@ -721,7 +721,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
                               }} />
                               <div>
                                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: theme === t ? '#1E3A5F' : '#64748B', marginBottom: '4px' }}>
-                                  {t === 'premium' ? '💎 Premium' : '✨ Cute'}
+                                  {t === 'premium' ? 'Premium' : 'Cute'}
                                 </div>
                                 <p style={{ fontSize: '0.7rem', color: '#94A3B8', margin: 0, lineHeight: '1.3' }}>
                                   {t === 'premium' 
