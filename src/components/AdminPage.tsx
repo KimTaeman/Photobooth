@@ -619,7 +619,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ authed, setAuthed }) => {
         </div>
       </header>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: '#64748B', fontFamily: 'Fredoka, sans-serif', fontSize: '1.2rem', padding: '60px' }}>
             <RefreshCw size={40} className="spin" style={{ marginBottom: '16px', color: '#3B82F6' }} />
