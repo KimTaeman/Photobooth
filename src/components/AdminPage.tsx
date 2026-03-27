@@ -22,9 +22,9 @@ interface AdminLog {
 const AVAILABLE_FILTERS = [
   { id: 'none', label: 'Natural', preview: 'none' },
   { id: 'grayscale(100%)', label: 'B&W Classic', preview: 'grayscale(100%)' },
-  { id: '/filter1.png', label: 'Filter 1', preview: 'contrast(1.1) saturate(1.1) sepia(0.05)' },
-  { id: '/filter2.png', label: 'Filter 2', preview: 'contrast(1.2) brightness(1.1) saturate(1.2)' },
-  { id: '/filter3.png', label: 'Filter 3', preview: 'sepia(0.3) contrast(1.1)' },
+  { id: '/filter1.png', label: 'Adobe Lightroom 1', preview: 'contrast(1.1) saturate(1.1) sepia(0.05)' },
+  { id: '/filter2.png', label: 'Adobe Lightroom 2', preview: 'contrast(1.2) brightness(1.1) saturate(1.2)' },
+  // { id: '/filter3.png', label: 'Filter 3', preview: 'sepia(0.3) contrast(1.1)' },
 ];
 
 const DEFAULT_LAYOUT = { margin: 210, gutterX: 70, gutterY: 73, slotW: 995, slotH: 681 };
