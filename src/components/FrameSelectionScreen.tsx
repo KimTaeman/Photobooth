@@ -133,17 +133,6 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
         <div className={`idle-overlay ${isSplashing ? 'splashing' : ''}`} onClick={handleIdleTap}>
           {config?.theme === 'cute' ? (
             <>
-              <div 
-                style={{ 
-                  position: 'absolute', 
-                  inset: 0, 
-                  backgroundImage: 'url("/background.png")', 
-                  backgroundSize: 'cover', 
-                  backgroundPosition: 'center',
-                  opacity: 0.4,
-                  zIndex: 0
-                }} 
-              />
               <div className="idle-blob idle-blob-1" />
               <div className="idle-blob idle-blob-2" />
               <div className="idle-blob idle-blob-3" />
@@ -151,8 +140,8 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
                 <div className="idle-logo-container">
                   <img src={logo} alt="Logo" className="idle-logo" />
                 </div>
-                <h2 className="idle-title">Tap to<br />Start!</h2>
-                <p className="idle-subtitle">Summer Splash Photobooth</p>
+                <h2 className="idle-title">Tap to Start!</h2>
+                <p className="idle-subtitle">Tatt n' Snap 2026</p>
                 <div className="idle-dots">
                   <span /><span /><span />
                 </div>
