@@ -1,4 +1,4 @@
-export const CLOUDINARY_CLOUD_NAME = 'dpv3s9goh'; // Placeholder - user might need to provide this
+export const CLOUDINARY_CLOUD_NAME = 'dvcfftgrm'; // Placeholder - user might need to provide this
 export const CLOUDINARY_UPLOAD_PRESET = 'photobooth'; // Placeholder - user might need to provide this
 
 export async function uploadToCloudinary(file: Blob | string, resourceType: 'image' | 'video' | 'raw', filename: string) {
