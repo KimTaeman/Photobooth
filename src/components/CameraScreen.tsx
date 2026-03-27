@@ -211,8 +211,9 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
         const sx = (cw - sw) / 2,
           sy = (ch - sh) / 2;
         ctx.save();
+        const isLut = activeFilter.endsWith(".png");
         ctx.filter =
-          activeFilter === "lut"
+          isLut
             ? "contrast(1.1) saturate(1.1) sepia(0.05)"
             : activeFilter === "none"
               ? "none"
@@ -315,8 +316,10 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
     canvas.height = slotH;
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
+    const isLut = activeFilter.endsWith(".png");
+
     // Apply standard filter if not LUT
-    if (activeFilter !== "lut" && activeFilter !== "none") {
+    if (!isLut && activeFilter !== "none") {
       ctx.filter = activeFilter;
     }
 
@@ -325,9 +328,9 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
     drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    // Bake LUT ONLY if activeFilter is 'lut'
-    if (activeFilter === "lut") {
-      const lutData = await loadLUT("/filter.png");
+    // Bake LUT ONLY if activeFilter is a LUT file
+    if (isLut) {
+      const lutData = await loadLUT(activeFilter);
       if (lutData) {
         applyLUT(ctx, lutData, canvas.width, canvas.height);
       }
@@ -347,8 +350,8 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
     intervalMs = 80,
   ): Promise<string[]> => {
     const frames: string[] = [];
-    const lutData =
-      activeFilter === "lut" ? await loadLUT("/filter.png") : null;
+    const isLut = activeFilter.endsWith(".png");
+    const lutData = isLut ? await loadLUT(activeFilter) : null;
 
     for (let i = 0; i < count; i++) {
       const url = await new Promise<string>((resolve) => {
@@ -358,7 +361,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
         canvas.height = slotH;
         const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
-        if (activeFilter !== "lut" && activeFilter !== "none") {
+        if (!isLut && activeFilter !== "none") {
           ctx.filter = activeFilter;
         }
 
@@ -366,7 +369,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
         drawImageCover(ctx, v, 0, 0, canvas.width, canvas.height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-        if (activeFilter === "lut" && lutData) {
+        if (isLut && lutData) {
           applyLUT(ctx, lutData, canvas.width, canvas.height);
         }
 
@@ -612,8 +615,8 @@ const CameraScreen: React.FC<CameraScreenProps> = ({
               }}
             >
               🎨{" "}
-              {activeFilter === "lut"
-                ? "Adobe Lightroom"
+              {activeFilter.endsWith(".png")
+                ? "Lightroom"
                 : activeFilter === "grayscale(100%)"
                   ? "B&W Classic"
                   : activeFilter}
