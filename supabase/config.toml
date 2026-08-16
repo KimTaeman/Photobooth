@@ -1,0 +1,10 @@
+project_id = "tatt-n-snap"
+
+[functions.cloudinary-sign]
+verify_jwt = true
+
+[functions.cloudinary-complete]
+verify_jwt = true
+
+[functions.cloudinary-retention]
+verify_jwt = false

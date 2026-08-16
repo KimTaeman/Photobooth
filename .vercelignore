@@ -1,0 +1,20 @@
+# Local and generated artifacts
+.git/
+.github/
+.vercel/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Desktop/backend sources are not part of the Vite web build
+src-tauri/
+supabase/
+e2e/
+legacy/
+
+# Local-only configuration and documentation
+.env*
+!.env.example
+*.md
+LICENSE

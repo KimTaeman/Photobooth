@@ -1,5 +1,5 @@
 import React from 'react';
-import type { RemoteConfig } from "../hooks/useSupabase";
+import type { RemoteConfig } from '../hooks/useSupabase';
 
 const Stickers: React.FC<{ config?: RemoteConfig | null }> = ({ config }) => {
   if (!config?.enableStickers) return null;
@@ -27,7 +27,13 @@ const Stickers: React.FC<{ config?: RemoteConfig | null }> = ({ config }) => {
         <circle cx="40" cy="52" r="4" fill="#1E3A5F" />
         <circle cx="60" cy="52" r="4" fill="#1E3A5F" />
         <ellipse cx="50" cy="60" rx="3" ry="2" fill="#F9A8D4" />
-        <path d="M44 64 Q50 70 56 64" stroke="#1E3A5F" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path
+          d="M44 64 Q50 70 56 64"
+          stroke="#1E3A5F"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
         <line x1="20" y1="55" x2="35" y2="58" stroke="#FACC15" strokeWidth="1.5" />
         <line x1="20" y1="60" x2="35" y2="60" stroke="#FACC15" strokeWidth="1.5" />
         <line x1="65" y1="58" x2="80" y2="55" stroke="#FACC15" strokeWidth="1.5" />
@@ -36,20 +42,65 @@ const Stickers: React.FC<{ config?: RemoteConfig | null }> = ({ config }) => {
 
       {/* Water drop bottom-left */}
       <svg className="sticker sticker-bl" width="60" height="70" viewBox="0 0 60 80" fill="none">
-        <path d="M30 5 Q30 5 10 45 Q10 65 30 75 Q50 65 50 45 Q30 5 30 5Z" fill="#BAE6FD" stroke="#60A5FA" strokeWidth="2" />
-        <ellipse cx="24" cy="48" rx="6" ry="8" fill="rgba(255,255,255,0.5)" transform="rotate(-15 24 48)" />
+        <path
+          d="M30 5 Q30 5 10 45 Q10 65 30 75 Q50 65 50 45 Q30 5 30 5Z"
+          fill="#BAE6FD"
+          stroke="#60A5FA"
+          strokeWidth="2"
+        />
+        <ellipse
+          cx="24"
+          cy="48"
+          rx="6"
+          ry="8"
+          fill="rgba(255,255,255,0.5)"
+          transform="rotate(-15 24 48)"
+        />
       </svg>
 
       {/* Water gun bottom-right */}
       <svg className="sticker sticker-br" width="90" height="60" viewBox="0 0 120 80" fill="none">
         <rect x="10" y="30" width="60" height="20" rx="6" fill="#60A5FA" />
         <rect x="60" y="25" width="40" height="12" rx="4" fill="#3B82F6" />
-        <rect x="95" y="22" width="20" height="18" rx="3" fill="#BAE6FD" stroke="#3B82F6" strokeWidth="2" />
+        <rect
+          x="95"
+          y="22"
+          width="20"
+          height="18"
+          rx="3"
+          fill="#BAE6FD"
+          stroke="#3B82F6"
+          strokeWidth="2"
+        />
         <rect x="30" y="48" width="14" height="22" rx="4" fill="#60A5FA" />
         <circle cx="22" cy="40" r="6" fill="#BAE6FD" />
-        <line x1="115" y1="28" x2="118" y2="24" stroke="#BAE6FD" strokeWidth="3" strokeLinecap="round" />
-        <line x1="115" y1="31" x2="120" y2="31" stroke="#BAE6FD" strokeWidth="3" strokeLinecap="round" />
-        <line x1="115" y1="35" x2="118" y2="38" stroke="#BAE6FD" strokeWidth="3" strokeLinecap="round" />
+        <line
+          x1="115"
+          y1="28"
+          x2="118"
+          y2="24"
+          stroke="#BAE6FD"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <line
+          x1="115"
+          y1="31"
+          x2="120"
+          y2="31"
+          stroke="#BAE6FD"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <line
+          x1="115"
+          y1="35"
+          x2="118"
+          y2="38"
+          stroke="#BAE6FD"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
       </svg>
 
       {/* Splash middle-left */}

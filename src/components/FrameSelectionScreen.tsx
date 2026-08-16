@@ -12,13 +12,13 @@ interface FrameSelectionScreenProps {
   config: RemoteConfig | null;
 }
 
-const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({ 
-  onStartSession, 
-  isActive, 
-  selectedFrame, 
+const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
+  onStartSession,
+  isActive,
+  selectedFrame,
   onSelectFrame,
   availableFrames = ['/frame1.png', '/frame2.png', '/frame3.png', '/frame4.png'],
-  config
+  config,
 }) => {
   const [isIdle, setIsIdle] = useState(false);
   const [isSplashing, setIsSplashing] = useState(false);
@@ -27,7 +27,7 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   const frames = availableFrames.map((f, i) => ({
     id: `frame_${i}`,
     image: f,
-    label: `Frame ${i + 1}`
+    label: `Frame ${i + 1}`,
   }));
 
   const [splashes, setSplashes] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -45,17 +45,17 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
     }, 30000);
   }, []);
 
-  const handleIdleTap = (e: React.MouseEvent | React.TouchEvent) => {
-    const charX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const charY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+  const handleIdleTap = (e?: React.MouseEvent | React.TouchEvent) => {
+    const charX = e ? ('touches' in e ? e.touches[0].clientX : e.clientX) : window.innerWidth / 2;
+    const charY = e ? ('touches' in e ? e.touches[0].clientY : e.clientY) : window.innerHeight / 2;
+
     const newSplash = { id: splashIdRef.current++, x: charX, y: charY };
-    setSplashes(prev => [...prev, newSplash]);
+    setSplashes((prev) => [...prev, newSplash]);
     setIsSplashing(true);
 
     // Remove splash after animation
     setTimeout(() => {
-      setSplashes(prev => prev.filter(s => s.id !== newSplash.id));
+      setSplashes((prev) => prev.filter((s) => s.id !== newSplash.id));
     }, 800);
 
     // Transition to main screen after a short delay if it's the first tap or after animation
@@ -65,14 +65,17 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isActive) { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); setIsIdle(false); setIsSplashing(false); return; }
-    resetIdleTimer();
-    const events = ['mousemove', 'mousedown', 'touchstart', 'keydown'] as const;
-    events.forEach(e => window.addEventListener(e, resetIdleTimer));
-    return () => {
+    if (!isActive) {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+      return;
+    }
+    const initialTimer = window.setTimeout(resetIdleTimer, 0);
+    const events = ['mousemove', 'mousedown', 'touchstart', 'keydown'] as const;
+    events.forEach((e) => window.addEventListener(e, resetIdleTimer));
+    return () => {
+      window.clearTimeout(initialTimer);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      events.forEach((e) => window.removeEventListener(e, resetIdleTimer));
     };
   }, [isActive, resetIdleTimer]);
 
@@ -81,29 +84,55 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
   };
 
   return (
-    <div id="screen-frames" className={`screen ${isActive ? 'active' : ''}`} style={{ overflowY: isIdle ? 'hidden' : 'auto' }}>
+    <div
+      id="screen-frames"
+      className={`screen ${isActive ? 'active' : ''}`}
+      style={{ overflowY: isIdle ? 'hidden' : 'auto' }}
+    >
       <div className="frames-header">
-        <img src={logo} alt="Tatt n' Snap" style={{ height: '70px', objectFit: 'contain', marginBottom: '4px' }} />
-        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Palette size={30} /> Choose Your Frame</h1>
+        <img
+          src={logo}
+          alt="Tatt n' Snap"
+          style={{ height: '70px', objectFit: 'contain', marginBottom: '4px' }}
+        />
+        <h1
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+        >
+          <Palette size={30} /> Choose Your Frame
+        </h1>
         <p>Pick a frame for your photo strip!</p>
       </div>
       <div className="frames-grid">
-        {frames.map(frame => (
-          <div key={frame.id} className={`frame-card ${selectedFrame === frame.image ? 'selected' : ''}`} onClick={() => onSelectFrame(frame.image)}>
+        {frames.map((frame) => (
+          <div
+            key={frame.id}
+            className={`frame-card ${selectedFrame === frame.image ? 'selected' : ''}`}
+            role="button"
+            tabIndex={0}
+            aria-pressed={selectedFrame === frame.image}
+            onClick={() => onSelectFrame(frame.image)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') onSelectFrame(frame.image);
+            }}
+          >
             <div style={{ position: 'relative', width: '100%', aspectRatio: '2480 / 1748' }}>
-              <img src={frame.image} alt={frame.label} style={{ width: '100%', display: 'block' }} />
+              <img
+                src={frame.image}
+                alt={frame.label}
+                style={{ width: '100%', display: 'block' }}
+              />
               {frame.image === '/frame4.png' && (
-                <img 
-                  src="/frame4-transparent.png" 
-                  alt={`${frame.label} Overlay`} 
-                  style={{ 
-                    position: 'absolute', 
-                    inset: 0, 
-                    width: '100%', 
-                    height: '100%', 
-                    zIndex: 2, 
-                    pointerEvents: 'none' 
-                  }} 
+                <img
+                  src="/frame4-transparent.png"
+                  alt={`${frame.label} Overlay`}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 2,
+                    pointerEvents: 'none',
+                  }}
                 />
               )}
             </div>
@@ -112,25 +141,47 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
           </div>
         ))}
       </div>
-      <button 
-        className={`btn btn-primary btn-lg ${selectedFrame ? 'ready' : ''}`} 
-        id="btn-start-session" 
-        disabled={!selectedFrame} 
+      <button
+        className={`btn btn-primary btn-lg ${selectedFrame ? 'ready' : ''}`}
+        id="btn-start-session"
+        disabled={!selectedFrame}
         onClick={handleStartClick}
       >
         <Camera size={20} /> Start Photo Session
       </button>
 
       {config?.enablePdpa && (
-        <div style={{ marginTop: 'auto', padding: '30px 20px', textAlign: 'center', width: '100%', maxWidth: '600px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+        <div
+          style={{
+            marginTop: 'auto',
+            padding: '30px 20px',
+            textAlign: 'center',
+            width: '100%',
+            maxWidth: '600px',
+            color: 'var(--text-muted)',
+            fontSize: '0.8rem',
+          }}
+        >
           <p style={{ fontWeight: 600, marginBottom: '6px' }}>{config.pdpaTextTh}</p>
           <p style={{ fontSize: '0.75rem', opacity: 0.8 }}>{config.pdpaTextEn}</p>
-          <p style={{ marginTop: '12px', fontWeight: 700, color: 'var(--blue)' }}>* รูปภาพของคุณจะถูกลบอัตโนมัติภายใน 24 ชั่วโมง / Your photos will be automatically deleted after 24 hours</p>
+          <p style={{ marginTop: '12px', fontWeight: 700, color: 'var(--blue)' }}>
+            * รูปภาพของคุณจะถูกลบอัตโนมัติภายใน 24 ชั่วโมง / Your photos will be automatically
+            deleted after 24 hours
+          </p>
         </div>
       )}
 
       {isIdle && (
-        <div className={`idle-overlay ${isSplashing ? 'splashing' : ''}`} onClick={handleIdleTap}>
+        <div
+          className={`idle-overlay ${isSplashing ? 'splashing' : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-label="Start photobooth"
+          onClick={handleIdleTap}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') handleIdleTap();
+          }}
+        >
           {config?.theme === 'cute' ? (
             <>
               <div className="idle-blob idle-blob-1" />
@@ -143,7 +194,9 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
                 <h2 className="idle-title">Tap to Start!</h2>
                 <p className="idle-subtitle">Tatt n' Snap 2026</p>
                 <div className="idle-dots">
-                  <span /><span /><span />
+                  <span />
+                  <span />
+                  <span />
                 </div>
               </div>
             </>
@@ -164,17 +217,15 @@ const FrameSelectionScreen: React.FC<FrameSelectionScreenProps> = ({
                 </div>
                 <p className="idle-subtitle"></p>
                 <div className="idle-dots">
-                  <span /><span /><span />
+                  <span />
+                  <span />
+                  <span />
                 </div>
               </div>
             </>
           )}
-          {splashes.map(s => (
-            <div 
-              key={s.id} 
-              className="water-splash-effect" 
-              style={{ left: s.x, top: s.y }} 
-            />
+          {splashes.map((s) => (
+            <div key={s.id} className="water-splash-effect" style={{ left: s.x, top: s.y }} />
           ))}
         </div>
       )}

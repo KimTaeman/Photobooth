@@ -1,69 +1,101 @@
-import { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 import './App.css';
 import Stickers from './components/Stickers';
-import LockScreen from './components/LockScreen';
-import FrameSelectionScreen from './components/FrameSelectionScreen';
-import CameraScreen from './components/CameraScreen';
-import ResultScreen from './components/ResultScreen';
-import SummerSplashPage from './components/SummerSplashPage';
-import AdminPage from './components/AdminPage';
-import NotFoundPage from './components/NotFoundPage';
-import StickerTestPage from './components/StickerTestPage';
 import type { Screen } from './types';
-import { getAllSettings, supabase } from './hooks/useSupabase';
-import type { RemoteConfig } from './hooks/useSupabase';
+import {
+  getAllSettingsResult,
+  getAppRole,
+  supabase,
+  type ConfigLoadResult,
+} from './hooks/useSupabase';
+import type { RemoteConfig } from './config/remoteConfig';
+import { revokeObjectUrl } from './lib/objectUrls';
+import { UploadQueueProvider } from './context/UploadQueueContext';
 
-function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean }) {
-  const [currentScreen, setCurrentScreen] = useState<Screen>(isAdminAuthenticated ? 'frames' : 'lock');
+const LockScreen = lazy(() => import('./components/LockScreen'));
+const FrameSelectionScreen = lazy(() => import('./components/FrameSelectionScreen'));
+const CameraScreen = lazy(() => import('./components/CameraScreen'));
+const ResultScreen = lazy(() => import('./components/ResultScreen'));
+const SummerSplashPage = lazy(() => import('./components/SummerSplashPage'));
+const AdminPage = lazy(() => import('./components/AdminPage'));
+const NotFoundPage = lazy(() => import('./components/NotFoundPage'));
+const StickerTestPage = lazy(() => import('./components/StickerTestPage'));
+
+function LoadingScreen() {
+  return (
+    <div className="route-loading" role="status">
+      Loading photobooth…
+    </div>
+  );
+}
+
+function ConfigStatus({ source }: { source: ConfigLoadResult['source'] | null }) {
+  if (!source || source === 'remote') return null;
+  return (
+    <div className="connection-status" role="status">
+      {source === 'cache' ? 'Offline · using last saved settings' : 'Offline · using safe defaults'}
+    </div>
+  );
+}
+
+function PhotoboothApp({ isOperatorAuthenticated }: { isOperatorAuthenticated: boolean }) {
+  const [currentScreen, setCurrentScreen] = useState<Screen>(
+    isOperatorAuthenticated ? 'frames' : 'lock',
+  );
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
   const [sessionPhotos, setSessionPhotos] = useState<string[]>([]);
   const [sessionBursts, setSessionBursts] = useState<string[][]>([]);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [config, setConfig] = useState<RemoteConfig | null>(null);
-  const [theme, setTheme] = useState<'premium' | 'cute'>(() => {
-    return (localStorage.getItem('pb_theme') as 'premium' | 'cute') || 'premium';
-  });
+  const [configSource, setConfigSource] = useState<ConfigLoadResult['source'] | null>(null);
+  const mediaUrlsRef = useRef<string[]>([]);
+  const [theme, setTheme] = useState<'premium' | 'cute'>(
+    () => (localStorage.getItem('pb_theme') as 'premium' | 'cute') || 'premium',
+  );
 
   useEffect(() => {
+    let active = true;
     const fetchConfig = async () => {
-      const remoteConfig = await getAllSettings();
-      setConfig(remoteConfig);
-      if (remoteConfig.theme) {
-        setTheme(remoteConfig.theme);
-        localStorage.setItem('pb_theme', remoteConfig.theme);
-      }
+      const result = await getAllSettingsResult();
+      if (!active) return;
+      setConfig(result.config);
+      setConfigSource(result.source);
+      setTheme(result.config.theme);
+      localStorage.setItem('pb_theme', result.config.theme);
     };
-    fetchConfig();
+    void fetchConfig();
 
-    // Subscribe to real-time updates for settings
     const channel = supabase
       .channel('public:settings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
-        fetchConfig();
+        void fetchConfig();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') void fetchConfig();
+      });
+
+    const handleOnline = () => void fetchConfig();
+    window.addEventListener('online', handleOnline);
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      window.removeEventListener('online', handleOnline);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
-  const handleUnlock = () => {
-    setCurrentScreen('frames');
-  };
+  useEffect(() => {
+    mediaUrlsRef.current = [...sessionPhotos, ...sessionBursts.flat()];
+  }, [sessionBursts, sessionPhotos]);
 
-  const handleSelectFrame = (frame: string) => {
-    setSelectedFrame(frame);
-  };
-
-  const handleStartSession = () => {
-    setCurrentScreen('camera');
-  };
-
-  const handleCameraBack = () => {
-    setCurrentScreen('frames');
-  };
+  useEffect(
+    () => () => {
+      mediaUrlsRef.current.forEach(revokeObjectUrl);
+    },
+    [],
+  );
 
   const handleCameraComplete = (photos: string[], video: Blob | null, bursts: string[][]) => {
     setSessionPhotos(photos);
@@ -73,11 +105,7 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
   };
 
   const handleNewSession = () => {
-    // Revoke URLs to free memory
-    sessionPhotos.forEach(url => URL.revokeObjectURL(url));
-    sessionBursts.flat().forEach(url => URL.revokeObjectURL(url));
-    
-    // Clear all session states
+    mediaUrlsRef.current.forEach(revokeObjectUrl);
     setSessionPhotos([]);
     setSessionBursts([]);
     setVideoBlob(null);
@@ -85,58 +113,105 @@ function PhotoboothApp({ isAdminAuthenticated }: { isAdminAuthenticated: boolean
     setCurrentScreen('frames');
   };
 
+  let activeScreen;
+  switch (currentScreen) {
+    case 'lock':
+      activeScreen = <LockScreen isActive onUnlock={() => setCurrentScreen('frames')} />;
+      break;
+    case 'frames':
+      activeScreen = (
+        <FrameSelectionScreen
+          isActive
+          selectedFrame={selectedFrame}
+          onSelectFrame={setSelectedFrame}
+          onStartSession={() => setCurrentScreen('camera')}
+          availableFrames={config?.availableFrames}
+          config={config}
+        />
+      );
+      break;
+    case 'camera':
+      activeScreen = (
+        <CameraScreen
+          isActive
+          selectedFrame={selectedFrame}
+          onBack={() => setCurrentScreen('frames')}
+          onComplete={handleCameraComplete}
+          config={config}
+        />
+      );
+      break;
+    case 'result':
+      activeScreen = (
+        <ResultScreen
+          isActive
+          photos={sessionPhotos}
+          photosBursts={sessionBursts}
+          videoBlob={videoBlob}
+          selectedFrame={selectedFrame}
+          onNewSession={handleNewSession}
+          config={config}
+        />
+      );
+      break;
+  }
+
   return (
     <div className={`app-container theme-${theme}`}>
+      <ConfigStatus source={configSource} />
       <Stickers config={config} />
-      
-      <LockScreen 
-        isActive={currentScreen === 'lock'} 
-        onUnlock={handleUnlock} 
-      />
-
-      <FrameSelectionScreen 
-        isActive={currentScreen === 'frames'}
-        selectedFrame={selectedFrame}
-        onSelectFrame={handleSelectFrame}
-        onStartSession={handleStartSession}
-        availableFrames={config?.availableFrames}
-        config={config}
-      />
-
-      <CameraScreen 
-        isActive={currentScreen === 'camera'}
-        selectedFrame={selectedFrame}
-        onBack={handleCameraBack}
-        onComplete={handleCameraComplete}
-        config={config}
-      />
-
-      <ResultScreen
-        isActive={currentScreen === 'result'}
-        photos={sessionPhotos}
-        photosBursts={sessionBursts}
-        videoBlob={videoBlob}
-        selectedFrame={selectedFrame}
-        onNewSession={handleNewSession}
-        config={config}
-      />
+      <Suspense fallback={<LoadingScreen />}>{activeScreen}</Suspense>
     </div>
   );
 }
 
 function App() {
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) {
+        setUser(data.session?.user ?? null);
+        setAuthReady(true);
+      }
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (!authReady) return <LoadingScreen />;
+
+  const role = getAppRole(user);
+  const isOperatorAuthenticated = role === 'operator' || role === 'admin';
+  const isAdminAuthenticated = role === 'admin';
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<PhotoboothApp isAdminAuthenticated={isAdminAuthenticated} />} />
-        <Route path="/summer-splash" element={<SummerSplashPage />} />
-        <Route path="/admin" element={<AdminPage authed={isAdminAuthenticated} setAuthed={setIsAdminAuthenticated} />} />
-        <Route path="/sticker-test" element={<StickerTestPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </HashRouter>
+    <UploadQueueProvider>
+      <HashRouter>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route
+              path="/"
+              element={<PhotoboothApp isOperatorAuthenticated={isOperatorAuthenticated} />}
+            />
+            <Route path="/summer-splash" element={<SummerSplashPage />} />
+            <Route path="/admin" element={<AdminPage authed={isAdminAuthenticated} />} />
+            <Route path="/sticker-test" element={<StickerTestPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </HashRouter>
+    </UploadQueueProvider>
   );
 }
 
