@@ -57,4 +57,4 @@ jobs:
           deno-version: v2.x
       - run: supabase start
       - run: supabase test db
-      - run: deno check supabase/functions/cloudinary-sign/index.ts supabase/functions/cloudinary-complete/index.ts supabase/functions/cloudinary-retention/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/cloudinary-sign/index.ts supabase/functions/cloudinary-complete/index.ts supabase/functions/cloudinary-retention/index.ts
