@@ -74,6 +74,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isActive }) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="username"
+          style={{ marginBottom: '10px' }}
         />
         <label className="sr-only" htmlFor="operator-password">
           Password
