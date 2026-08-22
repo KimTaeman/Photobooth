@@ -294,10 +294,22 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
             reject(new Error(obj.errorMsg || 'GIF generation failed'));
             return;
           }
-          fetch(obj.image)
-            .then((r) => r.blob())
-            .then(resolve)
-            .catch(reject);
+          try {
+            const [header, encoded] = obj.image.split(',', 2);
+            const mimeType = header.match(/^data:([^;]+);base64$/)?.[1];
+            if (!mimeType || !encoded) {
+              throw new Error('GIF encoder returned an invalid data URL');
+            }
+
+            const binary = atob(encoded);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            resolve(new Blob([bytes], { type: mimeType }));
+          } catch (error) {
+            reject(error);
+          }
         },
       );
     });
